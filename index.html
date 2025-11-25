@@ -39,6 +39,25 @@
             width: 100%;
         }
 
+        .sync-status {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .sync-status.syncing {
+            background: #ff9800;
+        }
+
+        .sync-status.error {
+            background: #f44336;
+        }
+
         .login-modal {
             display: flex;
             position: fixed;
@@ -531,6 +550,10 @@
         <span id="singapore-time">Loading...</span>
     </div>
 
+    <div class="sync-status" id="sync-status">
+        <i class="fas fa-sync"></i> <span id="sync-message">Syncing with cloud...</span>
+    </div>
+
     <div class="login-modal" id="login-modal">
         <div class="login-content">
             <h2><i class="fas fa-lock"></i> Login Required</h2>
@@ -547,6 +570,7 @@
             <div class="user-banner" id="user-banner">
                 <i class="fas fa-user"></i> 
                 Logged in as: <span id="logged-in-user">User</span>
+                <span id="cloud-status" style="margin-left: 10px; font-size: 14px;">☁️ Cloud Sync</span>
             </div>
         </header>
 
@@ -559,6 +583,9 @@
             </button>
             <button class="action-btn-large" onclick="viewActivityLog()">
                 <i class="fas fa-history"></i> View Logs
+            </button>
+            <button class="action-btn-large" onclick="manualSync()">
+                <i class="fas fa-sync"></i> Sync Now
             </button>
             <button class="action-btn-large" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i> Logout
@@ -681,9 +708,37 @@
     </div>
 
     <script>
-        // [Keep all your existing JavaScript code exactly as is]
+        // === GOOGLE SHEETS CONFIGURATION ===
+        // REPLACE THIS WITH YOUR ACTUAL GOOGLE SHEET ID
+        const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU'; // You'll get this from your Google Sheet URL
+        const SHEET_NAME = 'Sheet1';
+
         // === SIMPLE DEBUGGING ===
         console.log("Script loaded successfully");
+
+        // === SYNC STATUS ===
+        function showSyncStatus(message, type = 'info') {
+            const status = document.getElementById('sync-status');
+            const messageEl = document.getElementById('sync-message');
+            
+            messageEl.textContent = message;
+            status.className = 'sync-status';
+            
+            if (type === 'syncing') {
+                status.classList.add('syncing');
+            } else if (type === 'error') {
+                status.classList.add('error');
+            }
+            
+            status.style.display = 'block';
+            
+            // Auto-hide after 3 seconds unless it's an error
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
 
         // === ACTIVITY LOG ===
         let activityLog = [];
@@ -821,6 +876,134 @@
 
         let events = [];
 
+        // === GOOGLE SHEETS INTEGRATION ===
+        async function loadDataFromSheets() {
+            if (SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
+                console.log("Google Sheets not configured - using localStorage");
+                loadDataFromLocalStorage();
+                return;
+            }
+
+            showSyncStatus('Loading data from cloud...', 'syncing');
+            
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const text = await response.text();
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                
+                // Reset data
+                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                events = [];
+                
+                if (json.table.rows.length > 0) {
+                    json.table.rows.forEach((row, index) => {
+                        // Skip header row
+                        if (index === 0) return;
+                        
+                        const type = row.c[0]?.v;
+                        const title = row.c[1]?.v;
+                        const description = row.c[2]?.v;
+                        const day = row.c[3]?.v;
+                        const date = row.c[4]?.v;
+                        const startTime = row.c[5]?.v;
+                        const endTime = row.c[6]?.v;
+                        const days = row.c[7]?.v;
+                        
+                        if (type === 'Programme' && title) {
+                            const programmeDays = days ? days.split(',').map(d => d.trim()) : [day];
+                            
+                            programmeDays.forEach(progDay => {
+                                if (programmes[progDay]) {
+                                    programmes[progDay].push({
+                                        title,
+                                        description: description || '',
+                                        startTime: startTime || '',
+                                        endTime: endTime || '',
+                                        days: programmeDays
+                                    });
+                                }
+                            });
+                        } else if (type === 'Event' && title) {
+                            events.push({
+                                title,
+                                description: description || '',
+                                date: date || '',
+                                startTime: startTime || '',
+                                endTime: endTime || '',
+                                day: day || ''
+                            });
+                        }
+                    });
+                    
+                    showSyncStatus('Data loaded from cloud successfully', 'info');
+                    console.log("Data loaded from Google Sheets:", { programmes, events });
+                } else {
+                    showSyncStatus('No data found in cloud', 'info');
+                }
+                
+                // Save to localStorage as backup
+                saveDataToLocalStorage();
+                
+            } catch (error) {
+                console.error("Error loading from Google Sheets:", error);
+                showSyncStatus('Error loading cloud data. Using local backup.', 'error');
+                loadDataFromLocalStorage();
+            }
+        }
+
+        function loadDataFromLocalStorage() {
+            const savedProgrammes = localStorage.getItem('programmesData');
+            const savedEvents = localStorage.getItem('eventsData');
+            
+            if (savedProgrammes) programmes = JSON.parse(savedProgrammes);
+            if (savedEvents) events = JSON.parse(savedEvents);
+            
+            console.log("Data loaded from localStorage:", { programmes, events });
+        }
+
+        function saveDataToLocalStorage() {
+            localStorage.setItem('programmesData', JSON.stringify(programmes));
+            localStorage.setItem('eventsData', JSON.stringify(events));
+        }
+
+        async function saveDataToSheets() {
+            if (SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
+                console.log("Google Sheets not configured - saving to localStorage only");
+                saveDataToLocalStorage();
+                return;
+            }
+
+            showSyncStatus('Saving to cloud...', 'syncing');
+            
+            try {
+                // For a real implementation, you'd need Google Apps Script
+                // This is a simplified version that just updates local storage
+                // In a production app, you'd use Google Apps Script web app
+                
+                saveDataToLocalStorage();
+                showSyncStatus('Data saved locally (Google Sheets update requires additional setup)', 'info');
+                
+                // Note: Full Google Sheets write access requires Google Apps Script
+                // This would be the next enhancement for true real-time collaboration
+                
+            } catch (error) {
+                console.error("Error saving to Google Sheets:", error);
+                showSyncStatus('Error saving to cloud. Data saved locally.', 'error');
+                saveDataToLocalStorage();
+            }
+        }
+
+        function manualSync() {
+            loadDataFromSheets().then(() => {
+                displaySchedule(getCurrentDay());
+                displayManageList();
+            });
+        }
+
         // === FORM SUBMISSIONS ===
         document.getElementById('programme-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -857,7 +1040,7 @@
                 programmes[day].push(newProgramme);
             });
 
-            saveData();
+            saveDataToSheets();
             document.getElementById('programme-form').reset();
             
             // Clear day selections
@@ -898,7 +1081,7 @@
             };
 
             events.push(newEvent);
-            saveData();
+            saveDataToSheets();
             document.getElementById('event-form').reset();
             
             logActivity(`Added event: "${title}"`, 'success');
@@ -1095,7 +1278,7 @@
             if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
                 const programmeTitle = programmes[day][index].title;
                 programmes[day].splice(index, 1);
-                saveData();
+                saveDataToSheets();
                 displaySchedule(day);
                 displayManageList();
                 logActivity(`Edited programme: "${programmeTitle}"`, 'info');
@@ -1111,7 +1294,7 @@
             if (confirm('Delete this programme?')) {
                 const programmeTitle = programmes[day][index].title;
                 programmes[day].splice(index, 1);
-                saveData();
+                saveDataToSheets();
                 displaySchedule(day);
                 displayManageList();
                 logActivity(`Deleted programme: "${programmeTitle}"`, 'warning');
@@ -1126,7 +1309,7 @@
             if (confirm('Delete this event?')) {
                 const eventTitle = events[index].title;
                 events.splice(index, 1);
-                saveData();
+                saveDataToSheets();
                 displayManageList();
                 logActivity(`Deleted event: "${eventTitle}"`, 'warning');
             }
@@ -1194,27 +1377,16 @@
             document.getElementById('singapore-time').textContent = timeString;
         }
 
-        // === STORAGE ===
-        function saveData() {
-            localStorage.setItem('programmesData', JSON.stringify(programmes));
-            localStorage.setItem('eventsData', JSON.stringify(events));
-        }
-
-        function loadData() {
-            const savedProgrammes = localStorage.getItem('programmesData');
-            const savedEvents = localStorage.getItem('eventsData');
-            
-            if (savedProgrammes) programmes = JSON.parse(savedProgrammes);
-            if (savedEvents) events = JSON.parse(savedEvents);
-        }
-
         // === INITIALIZATION ===
         function initializeCalendar() {
             console.log("Initializing calendar");
-            loadData();
             loadActivityLog();
             initializeDaySelection();
-            displaySchedule('mon');
+            
+            // Load data from Google Sheets (or localStorage fallback)
+            loadDataFromSheets().then(() => {
+                displaySchedule('mon');
+            });
             
             // Set up admin permissions
             if (currentUser !== 'admin') {
@@ -1226,6 +1398,24 @@
             // Set min date for event form
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('event-date').min = today;
+            
+            // Auto-refresh data every 60 seconds
+            setInterval(() => {
+                if (SHEET_ID !== 'YOUR_GOOGLE_SHEET_ID_HERE') {
+                    loadDataFromSheets().then(() => {
+                        const currentDay = getCurrentDay();
+                        displaySchedule(currentDay);
+                        if (document.getElementById('manage').classList.contains('active')) {
+                            displayManageList();
+                        }
+                    });
+                }
+            }, 60000);
+        }
+
+        function getCurrentDay() {
+            const activeDay = document.querySelector('.day.active');
+            return activeDay ? activeDay.getAttribute('data-day') : 'mon';
         }
 
         // Start time updates
