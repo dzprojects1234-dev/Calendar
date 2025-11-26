@@ -708,221 +708,104 @@
     </div>
 
     <script>
+
+        // === DEBUG FUNCTION ===
+        function debugSheetsConnection() {
+            console.log("=== DEBUG SHEETS CONNECTION ===");
+            console.log("Sheet ID:", SHEET_ID);
+            console.log("Sheet Name:", SHEET_NAME);
+            
+            const testUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq&sheet=${SHEET_NAME}`;
+            console.log("Test URL:", testUrl);
+            
+            // Test the connection
+            fetch(testUrl)
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    console.log("Response OK:", response.ok);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log("Response length:", text.length);
+                    console.log("First 500 chars:", text.substring(0, 500));
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error);
+                });
+        }
+
+        // Call this in initializeCalendar() to test:
+        // debugSheetsConnection();
+
         // === GOOGLE SHEETS CONFIGURATION ===
-        // REPLACE THIS WITH YOUR ACTUAL GOOGLE SHEET ID
-        const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU'; // You'll get this from your Google Sheet URL
+        const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU/edit?gid=0#gid=0'; // Your actual Sheet ID
         const SHEET_NAME = 'Sheet1';
 
-        // === SIMPLE DEBUGGING ===
-        console.log("Script loaded successfully");
-
-        // === SYNC STATUS ===
-        function showSyncStatus(message, type = 'info') {
-            const status = document.getElementById('sync-status');
-            const messageEl = document.getElementById('sync-message');
-            
-            messageEl.textContent = message;
-            status.className = 'sync-status';
-            
-            if (type === 'syncing') {
-                status.classList.add('syncing');
-            } else if (type === 'error') {
-                status.classList.add('error');
-            }
-            
-            status.style.display = 'block';
-            
-            // Auto-hide after 3 seconds unless it's an error
-            if (type !== 'error') {
-                setTimeout(() => {
-                    status.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        // === ACTIVITY LOG ===
-        let activityLog = [];
-        
-        function logActivity(message, type = 'info') {
-            const timestamp = new Date().toLocaleString('en-SG');
-            const logEntry = {
-                timestamp,
-                user: currentUser,
-                message,
-                type
-            };
-            
-            activityLog.unshift(logEntry);
-            localStorage.setItem('activityLog', JSON.stringify(activityLog));
-            updateLogDisplay();
-            console.log(`LOG: ${timestamp} - ${currentUser} - ${message}`);
-        }
-        
-        function updateLogDisplay() {
-            const logEntries = document.getElementById('log-entries');
-            if (logEntries) {
-                logEntries.innerHTML = '';
-                activityLog.forEach(entry => {
-                    const div = document.createElement('div');
-                    div.className = 'log-entry';
-                    div.innerHTML = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
-                    logEntries.appendChild(div);
-                });
-            }
-        }
-        
-        function viewActivityLog() {
-            const logContainer = document.getElementById('activity-log');
-            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
-            updateLogDisplay();
-        }
-        
-        function loadActivityLog() {
-            const saved = localStorage.getItem('activityLog');
-            if (saved) activityLog = JSON.parse(saved);
-        }
-
-        // === AUTHENTICATION ===
-        const VALID_USERS = {
-            'staff': '11112',
-            'admin': 'A11112'
-        };
-
-        let currentUser = null;
-
-        function checkLogin() {
-            console.log("Login function called");
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorElement = document.getElementById('login-error');
-
-            if (VALID_USERS[username] && VALID_USERS[username] === password) {
-                currentUser = username;
-                document.getElementById('login-modal').style.display = 'none';
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('logged-in-user').textContent = username;
-                
-                logActivity('Logged in successfully', 'success');
-                initializeCalendar();
-            } else {
-                errorElement.style.display = 'block';
-                console.log("Login failed");
-            }
-        }
-
-        function logout() {
-            logActivity('Logged out', 'info');
-            currentUser = null;
-            document.getElementById('login-modal').style.display = 'flex';
-            document.getElementById('main-content').style.display = 'none';
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('login-error').style.display = 'none';
-        }
-
-        // === DAY SELECTION SYSTEM ===
-        function initializeDaySelection() {
-            console.log("Initializing day selection");
-            
-            const dayOptions = document.querySelectorAll('#programme-days-selection .day-option');
-            console.log("Found day options:", dayOptions.length);
-            
-            dayOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    console.log("Day option clicked:", this.getAttribute('data-day'));
-                    const day = this.getAttribute('data-day');
-                    
-                    if (day === 'daily') {
-                        // Select only daily, deselect others
-                        dayOptions.forEach(opt => {
-                            if (opt.getAttribute('data-day') === 'daily') {
-                                opt.classList.add('selected');
-                            } else {
-                                opt.classList.remove('selected');
-                            }
-                        });
-                    } else {
-                        // Deselect daily if it's selected
-                        document.querySelector('#programme-days-selection .day-option.daily').classList.remove('selected');
-                        // Toggle this day
-                        this.classList.toggle('selected');
-                    }
-                    
-                    console.log("Selected days:", getSelectedDays());
-                });
-            });
-        }
-
-        function getSelectedDays() {
-            const selectedOptions = document.querySelectorAll('#programme-days-selection .day-option.selected');
-            const selectedDays = [];
-            
-            selectedOptions.forEach(option => {
-                const day = option.getAttribute('data-day');
-                if (day === 'daily') {
-                    return ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-                }
-                selectedDays.push(day);
-            });
-            
-            console.log("getSelectedDays returning:", selectedDays);
-            return selectedDays;
-        }
-
-        // === CALENDAR DATA ===
-        let programmes = {
-            mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
-        };
-
-        let events = [];
-
-        // === GOOGLE SHEETS INTEGRATION ===
+        // === ENHANCED GOOGLE SHEETS INTEGRATION ===
         async function loadDataFromSheets() {
-            if (SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
-                console.log("Google Sheets not configured - using localStorage");
-                loadDataFromLocalStorage();
-                return;
+            if (SHEET_ID === 'xyz123') { // Make sure this matches your Sheet ID
+                console.log("Google Sheets configured - loading data...");
             }
 
             showSyncStatus('Loading data from cloud...', 'syncing');
             
             try {
-                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+                // Enhanced URL for better compatibility
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq&sheet=${SHEET_NAME}`;
+                console.log("Loading from URL:", url);
                 
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
                 const text = await response.text();
-                const json = JSON.parse(text.substring(47).slice(0, -2));
+                console.log("Raw response:", text.substring(0, 200)); // Log first 200 chars
+                
+                // More robust JSON parsing
+                let json;
+                try {
+                    const jsonStr = text.replace(/^.*?\(/, '').replace(/\)$/, '');
+                    json = JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error("JSON parse error:", parseError);
+                    throw new Error('Invalid JSON response from Google Sheets');
+                }
                 
                 // Reset data
                 programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
                 events = [];
                 
-                if (json.table.rows.length > 0) {
+                if (json.table && json.table.rows && json.table.rows.length > 0) {
+                    console.log(`Found ${json.table.rows.length} rows in sheet`);
+                    
                     json.table.rows.forEach((row, index) => {
-                        // Skip header row
+                        // Skip header row (index 0)
                         if (index === 0) return;
                         
-                        const type = row.c[0]?.v;
-                        const title = row.c[1]?.v;
-                        const description = row.c[2]?.v;
-                        const day = row.c[3]?.v;
-                        const date = row.c[4]?.v;
-                        const startTime = row.c[5]?.v;
-                        const endTime = row.c[6]?.v;
-                        const days = row.c[7]?.v;
+                        if (!row.c) return; // Skip empty rows
+                        
+                        const type = row.c[0]?.v || '';
+                        const title = row.c[1]?.v || '';
+                        const description = row.c[2]?.v || '';
+                        const day = row.c[3]?.v || '';
+                        const date = row.c[4]?.v || '';
+                        const startTime = row.c[5]?.v || '';
+                        const endTime = row.c[6]?.v || '';
+                        const days = row.c[7]?.v || '';
+
+                        console.log(`Row ${index}:`, { type, title, day });
                         
                         if (type === 'Programme' && title) {
-                            const programmeDays = days ? days.split(',').map(d => d.trim()) : [day];
+                            const programmeDays = days ? days.split(',').map(d => d.trim().toLowerCase()) : [day.toLowerCase()];
                             
                             programmeDays.forEach(progDay => {
                                 if (programmes[progDay]) {
                                     programmes[progDay].push({
                                         title,
-                                        description: description || '',
-                                        startTime: startTime || '',
-                                        endTime: endTime || '',
+                                        description,
+                                        startTime,
+                                        endTime,
                                         days: programmeDays
                                     });
                                 }
@@ -930,19 +813,20 @@
                         } else if (type === 'Event' && title) {
                             events.push({
                                 title,
-                                description: description || '',
-                                date: date || '',
-                                startTime: startTime || '',
-                                endTime: endTime || '',
-                                day: day || ''
+                                description,
+                                date,
+                                startTime,
+                                endTime,
+                                day: day.toLowerCase()
                             });
                         }
                     });
                     
-                    showSyncStatus('Data loaded from cloud successfully', 'info');
-                    console.log("Data loaded from Google Sheets:", { programmes, events });
+                    showSyncStatus(`Loaded ${Object.values(programmes).flat().length} programmes, ${events.length} events`, 'info');
                 } else {
-                    showSyncStatus('No data found in cloud', 'info');
+                    showSyncStatus('Sheet is empty. Add data to get started!', 'info');
+                    // Add sample data if sheet is empty
+                    addSampleData();
                 }
                 
                 // Save to localStorage as backup
@@ -950,51 +834,47 @@
                 
             } catch (error) {
                 console.error("Error loading from Google Sheets:", error);
-                showSyncStatus('Error loading cloud data. Using local backup.', 'error');
+                showSyncStatus('Using local data. Check sheet sharing settings.', 'error');
                 loadDataFromLocalStorage();
             }
         }
 
-        function loadDataFromLocalStorage() {
-            const savedProgrammes = localStorage.getItem('programmesData');
-            const savedEvents = localStorage.getItem('eventsData');
-            
-            if (savedProgrammes) programmes = JSON.parse(savedProgrammes);
-            if (savedEvents) events = JSON.parse(savedEvents);
-            
-            console.log("Data loaded from localStorage:", { programmes, events });
-        }
-
-        function saveDataToLocalStorage() {
-            localStorage.setItem('programmesData', JSON.stringify(programmes));
-            localStorage.setItem('eventsData', JSON.stringify(events));
-        }
-
-        async function saveDataToSheets() {
-            if (SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
-                console.log("Google Sheets not configured - saving to localStorage only");
-                saveDataToLocalStorage();
-                return;
-            }
-
-            showSyncStatus('Saving to cloud...', 'syncing');
-            
-            try {
-                // For a real implementation, you'd need Google Apps Script
-                // This is a simplified version that just updates local storage
-                // In a production app, you'd use Google Apps Script web app
-                
-                saveDataToLocalStorage();
-                showSyncStatus('Data saved locally (Google Sheets update requires additional setup)', 'info');
-                
-                // Note: Full Google Sheets write access requires Google Apps Script
-                // This would be the next enhancement for true real-time collaboration
-                
-            } catch (error) {
-                console.error("Error saving to Google Sheets:", error);
-                showSyncStatus('Error saving to cloud. Data saved locally.', 'error');
-                saveDataToLocalStorage();
-            }
+        // Add sample data to Google Sheets format
+        function addSampleData() {
+            programmes = {
+                mon: [
+                    { 
+                        title: "Morning Assembly", 
+                        description: "Daily morning gathering", 
+                        startTime: "08:00", 
+                        endTime: "08:30", 
+                        days: ["mon", "tue", "wed", "thu", "fri"] 
+                    }
+                ],
+                tue: [
+                    { 
+                        title: "Staff Meeting", 
+                        description: "Weekly team meeting", 
+                        startTime: "14:00", 
+                        endTime: "15:00", 
+                        days: ["tue"] 
+                    }
+                ],
+                wed: [],
+                thu: [],
+                fri: [
+                    { 
+                        title: "Friday Prayers", 
+                        description: "Jumu'ah prayers", 
+                        startTime: "13:00", 
+                        endTime: "14:00", 
+                        days: ["fri"] 
+                    }
+                ],
+                sat: [],
+                sun: []
+            };
+            saveDataToLocalStorage();
         }
 
         function manualSync() {
