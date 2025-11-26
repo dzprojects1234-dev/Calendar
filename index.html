@@ -580,39 +580,96 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWNBJmwifx8vNN
         let selectedDays = [];
 
 
+
+
         // === GOOGLE SHEETS LOADING ===
+
 async function loadDataFromSheets() {
     console.log("Loading data from Google Sheets via Apps Script...");
     showSyncStatus("Syncing with Google Sheets...", "info");
     
     try {
-        // Add callback parameter for JSONP approach
-        const url = APPS_SCRIPT_URL + '?callback=processSheetData';
+        // Use a CORS proxy to bypass restrictions
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const targetUrl = APPS_SCRIPT_URL;
         
-        // Create script tag for JSONP
-        const script = document.createElement('script');
-        script.src = url;
-        document.head.appendChild(script);
+        const response = await fetch(proxyUrl + targetUrl);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
         
-        // Set a timeout to handle failures
-        setTimeout(() => {
-            if (!window.sheetDataLoaded) {
-                console.log("Timeout - using sample data");
-                loadSampleData();
-                showSyncStatus("Timeout loading data, using sample data", "error");
-            }
-        }, 10000);
+        const data = await response.json();
         
-        return true;
+        // Reset data
+        programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+        events = [];
+        
+        if (data && data.length > 0) {
+            console.log(`Found ${data.length} rows in sheet`);
+            
+            data.forEach((row, index) => {
+                // Skip header row
+                if (index === 0) return;
+                
+                const type = row[0] || '';
+                const title = row[1] || '';
+                const description = row[2] || '';
+                const day = (row[3] || '').toLowerCase();
+                const date = row[4] || '';
+                const startTime = row[5] || '';
+                const endTime = row[6] || '';
+                const days = row[7] || '';
+                
+                if (type === 'Programme' && title && day) {
+                    const programmeDays = days ? 
+                        days.split(',').map(d => d.trim().toLowerCase()) : 
+                        [day];
+                    
+                    programmeDays.forEach(progDay => {
+                        if (programmes[progDay] !== undefined) {
+                            programmes[progDay].push({
+                                title,
+                                description: description || '',
+                                startTime: startTime || '',
+                                endTime: endTime || '',
+                                days: programmeDays
+                            });
+                        }
+                    });
+                } else if (type === 'Event' && title) {
+                    events.push({
+                        title,
+                        description: description || '',
+                        date: date || '',
+                        startTime: startTime || '',
+                        endTime: endTime || '',
+                        day: day || ''
+                    });
+                }
+            });
+            
+            console.log("Successfully loaded from Google Sheets");
+            showSyncStatus("Data synced successfully from Google Sheets!", "success");
+            logActivity('Data loaded from Google Sheets');
+            return true;
+            
+        } else {
+            console.log("No data found in Google Sheets");
+            showSyncStatus("No data found in Google Sheets", "error");
+            loadSampleData();
+            return false;
+        }
         
     } catch (error) {
         console.error("Error loading from Google Sheets:", error);
-        showSyncStatus("Error loading Google Sheets, using sample data", "error");
+        showSyncStatus("Error: " + error.message, "error");
         loadSampleData();
         logActivity('Error loading Google Sheets, using sample data');
         return false;
     }
 }
+
+
 
 // Add this global function to process the data
 window.processSheetData = function(data) {
