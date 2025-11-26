@@ -1,6 +1,6 @@
 <script>
     // === GOOGLE SHEETS CONFIGURATION ===
-    const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU'; // JUST the Sheet ID, not the full URL
+    const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU';
     const SHEET_NAME = 'Sheet1';
 
     // === SIMPLE DEBUGGING ===
@@ -11,22 +11,24 @@
         const status = document.getElementById('sync-status');
         const messageEl = document.getElementById('sync-message');
         
-        messageEl.textContent = message;
-        status.className = 'sync-status';
-        
-        if (type === 'syncing') {
-            status.classList.add('syncing');
-        } else if (type === 'error') {
-            status.classList.add('error');
-        }
-        
-        status.style.display = 'block';
-        
-        // Auto-hide after 3 seconds unless it's an error
-        if (type !== 'error') {
-            setTimeout(() => {
-                status.style.display = 'none';
-            }, 3000);
+        if (status && messageEl) {
+            messageEl.textContent = message;
+            status.className = 'sync-status';
+            
+            if (type === 'syncing') {
+                status.classList.add('syncing');
+            } else if (type === 'error') {
+                status.classList.add('error');
+            }
+            
+            status.style.display = 'block';
+            
+            // Auto-hide after 3 seconds unless it's an error
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
         }
     }
 
@@ -63,8 +65,10 @@
     
     function viewActivityLog() {
         const logContainer = document.getElementById('activity-log');
-        logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
-        updateLogDisplay();
+        if (logContainer) {
+            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
+            updateLogDisplay();
+        }
     }
     
     function loadActivityLog() {
@@ -171,7 +175,6 @@
         showSyncStatus('Loading data from cloud...', 'syncing');
         
         try {
-            // CORRECTED URL - using SHEET_ID and SHEET_NAME variables properly
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq&sheet=${SHEET_NAME}`;
             console.log("Loading from URL:", url);
             
@@ -180,9 +183,7 @@
             const jsonStr = text.replace(/^.*?\(/, '').replace(/\)$/, '');
             const json = JSON.parse(jsonStr);
             
-            // DEBUG: Show what we received
             console.log("=== GOOGLE SHEETS DATA ===");
-            console.log("Full JSON response:", json);
             
             if (json.table && json.table.rows) {
                 console.log(`Found ${json.table.rows.length} rows`);
@@ -192,68 +193,51 @@
                 events = [];
                 
                 json.table.rows.forEach((row, index) => {
-                    console.log(`--- Row ${index} ---`);
+                    // Skip header row
+                    if (index === 0) return;
                     
-                    // Log all cells in this row
-                    if (row.c) {
-                        row.c.forEach((cell, cellIndex) => {
-                            console.log(`Column ${cellIndex}:`, cell?.v);
+                    if (!row.c) return; // Skip empty rows
+                    
+                    const type = row.c[0]?.v || '';
+                    const title = row.c[1]?.v || '';
+                    const description = row.c[2]?.v || '';
+                    const day = (row.c[3]?.v || '').toLowerCase();
+                    const date = row.c[4]?.v || '';
+                    const startTime = row.c[5]?.v || '';
+                    const endTime = row.c[6]?.v || '';
+                    const days = row.c[7]?.v || '';
+                    
+                    console.log(`Row ${index}:`, { type, title, day });
+                    
+                    if (type === 'Programme' && title) {
+                        const programmeDays = days ? 
+                            days.split(',').map(d => d.trim().toLowerCase()) : 
+                            [day];
+                        
+                        programmeDays.forEach(progDay => {
+                            if (programmes[progDay]) {
+                                programmes[progDay].push({
+                                    title,
+                                    description,
+                                    startTime,
+                                    endTime,
+                                    days: programmeDays
+                                });
+                                console.log(`Added programme to ${progDay}: ${title}`);
+                            }
                         });
-                    }
-                    
-                    // Try to parse data (more flexible approach)
-                    if (index === 0) return; // Skip header row
-                    
-                    const cells = row.c || [];
-                    const type = cells[0]?.v || '';
-                    const title = cells[1]?.v || '';
-                    const description = cells[2]?.v || '';
-                    const day = (cells[3]?.v || '').toLowerCase();
-                    const date = cells[4]?.v || '';
-                    const startTime = cells[5]?.v || '';
-                    const endTime = cells[6]?.v || '';
-                    const days = cells[7]?.v || '';
-                    
-                    console.log(`Parsed: ${type} - "${title}" - day:${day}`);
-                    
-                    if (title) {
-                        if (type === 'Programme' || (!type && day)) {
-                            // It's a programme
-                            const programmeDays = days ? 
-                                days.split(',').map(d => d.trim().toLowerCase()) : 
-                                [day];
-                            
-                            programmeDays.forEach(progDay => {
-                                if (programmes[progDay]) {
-                                    programmes[progDay].push({
-                                        title,
-                                        description,
-                                        startTime,
-                                        endTime,
-                                        days: programmeDays
-                                    });
-                                    console.log(`Added programme to ${progDay}: ${title}`);
-                                }
-                            });
-                        } else if (type === 'Event' || date) {
-                            // It's an event
-                            events.push({
-                                title,
-                                description,
-                                date,
-                                startTime,
-                                endTime,
-                                day
-                            });
-                            console.log(`Added event: ${title}`);
-                        }
+                    } else if (type === 'Event' && title) {
+                        events.push({
+                            title,
+                            description,
+                            date,
+                            startTime,
+                            endTime,
+                            day
+                        });
+                        console.log(`Added event: ${title}`);
                     }
                 });
-                
-                // DEBUG: Show what we loaded
-                console.log("=== LOADED DATA ===");
-                console.log("Programmes:", programmes);
-                console.log("Events:", events);
                 
                 const programmeCount = Object.values(programmes).flat().length;
                 showSyncStatus(`Loaded ${programmeCount} programmes, ${events.length} events`, 'info');
@@ -262,7 +246,7 @@
             saveDataToLocalStorage();
             
         } catch (error) {
-            console.error("Error:", error);
+            console.error("Error loading from Google Sheets:", error);
             showSyncStatus('Error loading cloud data', 'error');
             loadDataFromLocalStorage();
         }
@@ -285,7 +269,6 @@
 
     function saveDataToSheets() {
         // For now, just save to localStorage
-        // Full Google Sheets write would require Google Apps Script
         saveDataToLocalStorage();
         showSyncStatus('Data saved locally', 'info');
     }
@@ -293,92 +276,103 @@
     function manualSync() {
         loadDataFromSheets().then(() => {
             displaySchedule(getCurrentDay());
-            displayManageList();
+            if (document.getElementById('manage').classList.contains('active')) {
+                displayManageList();
+            }
         });
     }
 
     // === FORM SUBMISSIONS ===
-    document.getElementById('programme-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        console.log("Programme form submitted");
+    document.addEventListener('DOMContentLoaded', function() {
+        const programmeForm = document.getElementById('programme-form');
+        const eventForm = document.getElementById('event-form');
         
-        if (currentUser !== 'admin') {
-            alert('You do not have permission to add programmes.');
-            return;
+        if (programmeForm) {
+            programmeForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log("Programme form submitted");
+                
+                if (currentUser !== 'admin') {
+                    alert('You do not have permission to add programmes.');
+                    return;
+                }
+
+                const selectedDays = getSelectedDays();
+                console.log("Selected days for programme:", selectedDays);
+                
+                if (selectedDays.length === 0) {
+                    alert('Please select at least one day for the programme.');
+                    return;
+                }
+
+                const title = document.getElementById('programme-title').value;
+                const description = document.getElementById('programme-description').value;
+                const startTime = document.getElementById('programme-start-time').value;
+                const endTime = document.getElementById('programme-end-time').value;
+
+                const newProgramme = {
+                    title,
+                    description,
+                    startTime,
+                    endTime,
+                    days: selectedDays
+                };
+
+                // Add to each selected day
+                selectedDays.forEach(day => {
+                    programmes[day].push(newProgramme);
+                });
+
+                saveDataToSheets();
+                programmeForm.reset();
+                
+                // Clear day selections
+                document.querySelectorAll('#programme-days-selection .day-option.selected').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+
+                logActivity(`Added programme: "${title}"`, 'success');
+                alert('Programme added successfully!');
+                switchToViewTab('mon');
+            });
         }
 
-        const selectedDays = getSelectedDays();
-        console.log("Selected days for programme:", selectedDays);
-        
-        if (selectedDays.length === 0) {
-            alert('Please select at least one day for the programme.');
-            return;
+        if (eventForm) {
+            eventForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (currentUser !== 'admin') {
+                    alert('You do not have permission to add events.');
+                    return;
+                }
+
+                const title = document.getElementById('event-title').value;
+                const date = document.getElementById('event-date').value;
+                const description = document.getElementById('event-description').value;
+                const startTime = document.getElementById('event-start-time').value;
+                const endTime = document.getElementById('event-end-time').value;
+                
+                // Get day of week from date
+                const dateObj = new Date(date);
+                const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+                const day = daysOfWeek[dateObj.getDay()];
+                
+                const newEvent = {
+                    title,
+                    date,
+                    description,
+                    startTime,
+                    endTime,
+                    day
+                };
+
+                events.push(newEvent);
+                saveDataToSheets();
+                eventForm.reset();
+                
+                logActivity(`Added event: "${title}"`, 'success');
+                alert('Event added successfully!');
+            });
         }
-
-        const title = document.getElementById('programme-title').value;
-        const description = document.getElementById('programme-description').value;
-        const startTime = document.getElementById('programme-start-time').value;
-        const endTime = document.getElementById('programme-end-time').value;
-
-        const newProgramme = {
-            title,
-            description,
-            startTime,
-            endTime,
-            days: selectedDays
-        };
-
-        // Add to each selected day
-        selectedDays.forEach(day => {
-            programmes[day].push(newProgramme);
-        });
-
-        saveDataToSheets();
-        document.getElementById('programme-form').reset();
-        
-        // Clear day selections
-        document.querySelectorAll('#programme-days-selection .day-option.selected').forEach(opt => {
-            opt.classList.remove('selected');
-        });
-
-        logActivity(`Added programme: "${title}"`, 'success');
-        alert('Programme added successfully!');
-        switchToViewTab('mon');
-    });
-
-    document.getElementById('event-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (currentUser !== 'admin') {
-            alert('You do not have permission to add events.');
-            return;
-        }
-
-        const title = document.getElementById('event-title').value;
-        const date = document.getElementById('event-date').value;
-        const description = document.getElementById('event-description').value;
-        const startTime = document.getElementById('event-start-time').value;
-        const endTime = document.getElementById('event-end-time').value;
-        
-        // Get day of week from date
-        const dateObj = new Date(date);
-        const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-        const day = daysOfWeek[dateObj.getDay()];
-        
-        const newEvent = {
-            title,
-            date,
-            description,
-            startTime,
-            endTime,
-            day
-        };
-
-        events.push(newEvent);
-        saveDataToSheets();
-        document.getElementById('event-form').reset();
-        
-        logActivity(`Added event: "${title}"`, 'success');
-        alert('Event added successfully!');
     });
 
     // === CSV EXPORT FUNCTION ===
@@ -390,7 +384,6 @@
         // Export programmes
         Object.keys(programmes).forEach(day => {
             programmes[day].forEach(programme => {
-                // Escape quotes in text fields for CSV
                 const escapeCSV = (text) => {
                     if (!text) return '';
                     return `"${text.toString().replace(/"/g, '""')}"`;
@@ -434,12 +427,11 @@
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         
-        // Create filename with current date
         const today = new Date();
         const dateString = today.toISOString().split('T')[0];
         const filename = `programmes-events-${dateString}.csv`;
         
-        if (navigator.msSaveBlob) { // IE 10+
+        if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, filename);
         } else {
             link.href = URL.createObjectURL(blob);
@@ -451,12 +443,14 @@
         }
         
         logActivity('Exported data to CSV', 'success');
-        console.log("CSV export completed. Filename:", filename);
+        console.log("CSV export completed");
     }
 
     // === DISPLAY FUNCTIONS ===
     function displaySchedule(day = 'mon') {
         const programmesList = document.getElementById('programmes-list');
+        if (!programmesList) return;
+        
         programmesList.innerHTML = '';
 
         if (programmes[day] && programmes[day].length > 0) {
@@ -485,6 +479,8 @@
 
     function displayManageList() {
         const manageList = document.getElementById('manage-list');
+        if (!manageList) return;
+        
         manageList.innerHTML = '';
 
         let hasItems = false;
@@ -567,7 +563,6 @@
             alert('You do not have permission to edit programmes.');
             return;
         }
-        // Simple edit - just delete and let user re-add
         if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
             const programmeTitle = programmes[day][index].title;
             programmes[day].splice(index, 1);
@@ -667,7 +662,10 @@
             timeZone: 'Asia/Singapore'
         };
         const timeString = now.toLocaleDateString('en-SG', options);
-        document.getElementById('singapore-time').textContent = timeString;
+        const timeElement = document.getElementById('singapore-time');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
     }
 
     // === INITIALIZATION ===
@@ -690,14 +688,17 @@
         
         // Set min date for event form
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('event-date').min = today;
+        const eventDateInput = document.getElementById('event-date');
+        if (eventDateInput) {
+            eventDateInput.min = today;
+        }
         
         // Auto-refresh data every 60 seconds
         setInterval(() => {
             loadDataFromSheets().then(() => {
                 const currentDay = getCurrentDay();
                 displaySchedule(currentDay);
-                if (document.getElementById('manage').classList.contains('active')) {
+                if (document.getElementById('manage') && document.getElementById('manage').classList.contains('active')) {
                     displayManageList();
                 }
             });
