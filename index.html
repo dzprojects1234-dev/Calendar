@@ -1,119 +1,1252 @@
-function doGet(e) {
-  try {
-    const action = e.parameter.action;
-    
-    if (action === 'getData') {
-      const sheet = SpreadsheetApp.openById('1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU').getSheetByName('Sheet1');
-      const data = sheet.getDataRange().getValues();
-      
-      return ContentService.createTextOutput(JSON.stringify(data))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: 'Invalid action'}))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
-      
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
-  }
-}
-
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
-    const itemData = data.data;
-    
-    const sheet = SpreadsheetApp.openById('1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU').getSheetByName('Sheet1');
-    
-    if (action === 'add') {
-      // Add new row
-      const lastRow = sheet.getLastRow();
-      const newRow = [
-        itemData.type,
-        itemData.title,
-        itemData.description || '',
-        itemData.day || '',
-        itemData.date || '',
-        itemData.startTime || '',
-        itemData.endTime || '',
-        itemData.days || ''
-      ];
-      
-      sheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
-      
-      return ContentService.createTextOutput(JSON.stringify({success: true}))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-        
-    } else if (action === 'delete') {
-      // Find and delete row
-      const allData = sheet.getDataRange().getValues();
-      
-      for (let i = allData.length - 1; i >= 1; i--) { // Start from 1 to skip header
-        const row = allData[i];
-        if (row[0] === itemData.type && row[1] === itemData.title) {
-          if ((itemData.type === 'Programme' && row[3] === itemData.day) || 
-              (itemData.type === 'Event' && row[4] === itemData.date)) {
-            sheet.deleteRow(i + 1);
-            break;
-          }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programmes & Events Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({success: true}))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: 'Invalid action'}))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
-      
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
-  }
-}
 
-function doOptions() {
-  return ContentService.createTextOutput()
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
-}
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .singapore-time {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .login-modal {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .login-input:focus {
+            border-color: #6a11cb;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+        }
+
+        .login-btn {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #5a0db5;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .user-banner {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .action-btn-large {
+            background: #fff;
+            color: #6a11cb;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn-large:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .content {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .week-days {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .day {
+            padding: 15px 10px;
+            text-align: center;
+            background: #f5f7ff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .day.active {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .events-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .event-card {
+            background: #f8faff;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #6a11cb;
+            position: relative;
+            padding-bottom: 70px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .event-actions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .no-events {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-style: italic;
+        }
+
+        button {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5a0db5;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #6a11cb;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+        }
+
+        .activity-log {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .log-entry {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #6a11cb;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #444;
+        }
+
+        .day-option {
+            padding: 12px;
+            text-align: center;
+            background: #f5f7ff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .day-option:hover {
+            background: #e6e9ff;
+        }
+
+        .day-option.selected {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .day-option.daily {
+            grid-column: 1 / -1;
+            background: #ffeb3b;
+            font-weight: bold;
+        }
+
+        .day-option.daily:hover {
+            background: #fdd835;
+        }
+
+        .day-option.daily.selected {
+            background: #ffc107;
+        }
+
+        .sync-status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .sync-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .sync-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .save-status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .save-success {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+        }
+
+        .save-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .week-days {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Singapore Time Display -->
+    <div class="singapore-time">
+        <i class="fas fa-clock"></i> Singapore: 
+        <span id="singapore-time">Loading...</span>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="login-modal">
+        <div class="login-content">
+            <h2><i class="fas fa-lock"></i> Login Required</h2>
+            <input type="text" id="username" class="login-input" placeholder="Username">
+            <input type="password" id="password" class="login-input" placeholder="Password">
+            <button class="login-btn" onclick="checkLogin()">Login</button>
+            <div style="color: red; margin-top: 10px; display: none;" id="login-error">Invalid username or password</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container" id="main-content" style="display: none;">
+        <header>
+            <h1>Programmes & Events Calendar</h1>
+            <div class="user-banner">
+                <i class="fas fa-user"></i> 
+                Logged in as: <span id="logged-in-user">User</span>
+            </div>
+        </header>
+
+        <!-- Sync Status -->
+        <div class="sync-status" id="sync-status" style="display: none;"></div>
+        <div class="save-status" id="save-status" style="display: none;"></div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="action-btn-large" onclick="printPage()">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <button class="action-btn-large" onclick="exportToCSV()">
+                <i class="fas fa-download"></i> Export CSV
+            </button>
+            <button class="action-btn-large" onclick="viewActivityLog()">
+                <i class="fas fa-history"></i> View Logs
+            </button>
+            <button class="action-btn-large" onclick="manualSync()">
+                <i class="fas fa-sync"></i> Sync Sheets
+            </button>
+            <button class="action-btn-large" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" data-tab="view">View Schedule</div>
+            <div class="tab" data-tab="add-programme">Add Programme</div>
+            <div class="tab" data-tab="add-event">Add Event</div>
+            <div class="tab" data-tab="manage">Manage All</div>
+        </div>
+        
+        <!-- View Schedule Tab -->
+        <div class="content active" id="view">
+            <h2>Weekly Schedule</h2>
+            <div class="week-days">
+                <div class="day active" data-day="mon">Monday</div>
+                <div class="day" data-day="tue">Tuesday</div>
+                <div class="day" data-day="wed">Wednesday</div>
+                <div class="day" data-day="thu">Thursday</div>
+                <div class="day" data-day="fri">Friday</div>
+                <div class="day" data-day="sat">Saturday</div>
+                <div class="day" data-day="sun">Sunday</div>
+            </div>
+            
+            <div class="events-container">
+                <h3>Schedule for <span id="current-day">Monday</span></h3>
+                <div class="events-list" id="programmes-list">
+                    <div class="no-events">Loading programmes...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Programme Tab -->
+        <div class="content" id="add-programme">
+            <h2>Add New Programme</h2>
+            <form id="programme-form">
+                <div class="form-group">
+                    <label for="programme-title">Programme Title</label>
+                    <input type="text" id="programme-title" placeholder="e.g., Madrasah Class" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="programme-description">Description</label>
+                    <textarea id="programme-description" placeholder="Describe the programme..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Programme Days</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0;">
+                        <div class="day-option" data-day="mon">Monday</div>
+                        <div class="day-option" data-day="tue">Tuesday</div>
+                        <div class="day-option" data-day="wed">Wednesday</div>
+                        <div class="day-option" data-day="thu">Thursday</div>
+                        <div class="day-option" data-day="fri">Friday</div>
+                        <div class="day-option" data-day="sat">Saturday</div>
+                        <div class="day-option" data-day="sun">Sunday</div>
+                        <div class="day-option daily">DAILY (All Days)</div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="programme-start-time">Start Time</label>
+                        <input type="time" id="programme-start-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="programme-end-time">End Time</label>
+                        <input type="time" id="programme-end-time" required>
+                    </div>
+                </div>
+                
+                <button type="submit"><i class="fas fa-calendar-plus"></i> Add Programme to Google Sheets</button>
+            </form>
+        </div>
+        
+        <!-- Add Event Tab -->
+        <div class="content" id="add-event">
+            <h2>Add New Event</h2>
+            <form id="event-form">
+                <div class="form-group">
+                    <label for="event-title">Event Title</label>
+                    <input type="text" id="event-title" placeholder="e.g., Food Sale" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="event-date">Event Date</label>
+                    <input type="date" id="event-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="event-description">Description</label>
+                    <textarea id="event-description" placeholder="Describe the event..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="event-start-time">Start Time</label>
+                        <input type="time" id="event-start-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-end-time">End Time</label>
+                        <input type="time" id="event-end-time" required>
+                    </div>
+                </div>
+                
+                <button type="submit"><i class="fas fa-plus-circle"></i> Add Event to Google Sheets</button>
+            </form>
+        </div>
+        
+        <!-- Manage All Tab -->
+        <div class="content" id="manage">
+            <h2>Manage All Programmes & Events</h2>
+            <div class="events-list" id="manage-list">
+                <div class="no-events">Loading programmes...</div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="activity-log" id="activity-log">
+            <h3>Activity Log</h3>
+            <div id="log-entries"></div>
+        </div>
+    </div>
+
+    <script>
+        // === GOOGLE SHEETS CONFIGURATION ===
+        // REPLACE THIS WITH YOUR ACTUAL APPS SCRIPT URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_ACTUAL_SCRIPT_ID/exec';
+        
+        // === CALENDAR DATA ===
+        let programmes = {
+            mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
+        };
+        let events = [];
+        let currentUser = null;
+        let activityLog = [];
+        let selectedDays = [];
+
+        // === GOOGLE SHEETS INTEGRATION ===
+        async function loadDataFromSheets() {
+            console.log("Loading data from Google Sheets...");
+            showSyncStatus("Syncing with Google Sheets...", "info");
+            
+            try {
+                const response = await fetch(APPS_SCRIPT_URL + '?action=getData');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                
+                // Reset data
+                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                events = [];
+                
+                if (data && data.length > 0) {
+                    console.log(`Found ${data.length} rows in sheet`);
+                    
+                    data.forEach((row, index) => {
+                        // Skip header row
+                        if (index === 0) return;
+                        
+                        const type = row[0] || '';
+                        const title = row[1] || '';
+                        const description = row[2] || '';
+                        const day = (row[3] || '').toLowerCase();
+                        const date = row[4] || '';
+                        const startTime = row[5] || '';
+                        const endTime = row[6] || '';
+                        const days = row[7] || '';
+                        
+                        if (type === 'Programme' && title && day) {
+                            const programmeDays = days ? 
+                                days.split(',').map(d => d.trim().toLowerCase()) : 
+                                [day];
+                            
+                            programmeDays.forEach(progDay => {
+                                if (programmes[progDay] !== undefined) {
+                                    programmes[progDay].push({
+                                        title,
+                                        description: description || '',
+                                        startTime: startTime || '',
+                                        endTime: endTime || '',
+                                        days: programmeDays
+                                    });
+                                }
+                            });
+                        } else if (type === 'Event' && title) {
+                            events.push({
+                                title,
+                                description: description || '',
+                                date: date || '',
+                                startTime: startTime || '',
+                                endTime: endTime || '',
+                                day: day || ''
+                            });
+                        }
+                    });
+                    
+                    console.log("Successfully loaded from Google Sheets");
+                    showSyncStatus("Data synced successfully from Google Sheets!", "success");
+                    logActivity('Data loaded from Google Sheets');
+                    return true;
+                    
+                } else {
+                    console.log("No data found in Google Sheets");
+                    showSyncStatus("No data found in Google Sheets", "error");
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error("Error loading from Google Sheets:", error);
+                showSyncStatus("Error loading Google Sheets: " + error.message, "error");
+                logActivity('Error loading Google Sheets');
+                return false;
+            }
+        }
+
+        async function saveToSheets(data, action) {
+            console.log("Saving data to Google Sheets...");
+            showSaveStatus("Saving to Google Sheets...", "info");
+            
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        data: data
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to save data');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log("Successfully saved to Google Sheets");
+                    showSaveStatus("Data saved successfully to Google Sheets!", "success");
+                    logActivity(`Data saved to Google Sheets: ${action}`);
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+                
+            } catch (error) {
+                console.error("Error saving to Google Sheets:", error);
+                showSaveStatus("Error saving to Google Sheets: " + error.message, "error");
+                logActivity(`Error saving to Google Sheets: ${error.message}`);
+                return false;
+            }
+        }
+
+        function showSyncStatus(message, type) {
+            const statusElement = document.getElementById('sync-status');
+            statusElement.textContent = message;
+            statusElement.className = 'sync-status';
+            
+            if (type === 'success') {
+                statusElement.classList.add('sync-success');
+            } else if (type === 'error') {
+                statusElement.classList.add('sync-error');
+            }
+            
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSaveStatus(message, type) {
+            const statusElement = document.getElementById('save-status');
+            statusElement.textContent = message;
+            statusElement.className = 'save-status';
+            
+            if (type === 'success') {
+                statusElement.classList.add('save-success');
+            } else if (type === 'error') {
+                statusElement.classList.add('save-error');
+            }
+            
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // === AUTHENTICATION ===
+        function checkLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('login-error');
+
+            if ((username === 'admin' && password === 'A11112') || 
+                (username === 'staff' && password === '11112')) {
+                currentUser = username;
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('logged-in-user').textContent = username;
+                logActivity(`Logged in as ${username}`);
+                initializeCalendar();
+            } else {
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            logActivity('Logged out');
+            currentUser = null;
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('login-error').style.display = 'none';
+        }
+
+        // === ACTIVITY LOG ===
+        function logActivity(message) {
+            const timestamp = new Date().toLocaleString('en-SG');
+            const logEntry = {
+                timestamp,
+                user: currentUser,
+                message
+            };
+            activityLog.unshift(logEntry);
+            updateLogDisplay();
+        }
+
+        function updateLogDisplay() {
+            const logEntries = document.getElementById('log-entries');
+            if (logEntries) {
+                logEntries.innerHTML = '';
+                activityLog.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    div.innerHTML = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
+                    logEntries.appendChild(div);
+                });
+            }
+        }
+
+        function viewActivityLog() {
+            const logContainer = document.getElementById('activity-log');
+            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
+            updateLogDisplay();
+        }
+
+        // === DAY SELECTION ===
+        function setupDaySelection() {
+            document.querySelectorAll('.day-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const day = this.getAttribute('data-day');
+                    
+                    if (this.classList.contains('daily')) {
+                        selectedDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                        document.querySelectorAll('.day-option').forEach(opt => {
+                            opt.classList.add('selected');
+                        });
+                    } else {
+                        if (selectedDays.includes(day)) {
+                            selectedDays = selectedDays.filter(d => d !== day);
+                            this.classList.remove('selected');
+                        } else {
+                            selectedDays.push(day);
+                            this.classList.add('selected');
+                        }
+                        
+                        const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                        const dailyOption = document.querySelector('.day-option.daily');
+                        if (allDays.every(day => selectedDays.includes(day))) {
+                            dailyOption.classList.add('selected');
+                        } else {
+                            dailyOption.classList.remove('selected');
+                        }
+                    }
+                });
+            });
+        }
+
+        // === DISPLAY FUNCTIONS ===
+        function displaySchedule(day = 'mon') {
+            const programmesList = document.getElementById('programmes-list');
+            programmesList.innerHTML = '';
+
+            if (programmes[day] && programmes[day].length > 0) {
+                programmes[day].forEach((programme, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'event-card';
+                    card.innerHTML = `
+                        <div style="font-weight: bold; font-size: 18px;">${programme.title}</div>
+                        <div style="color: #6a11cb; margin: 5px 0;">${programme.startTime} - ${programme.endTime}</div>
+                        <div>${programme.description}</div>
+                        ${currentUser === 'admin' ? `
+                        <div class="event-actions">
+                            <button class="action-btn" onclick="editProgramme('${day}', ${index})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="action-btn" onclick="deleteProgramme('${day}', ${index})" style="background: #ff4444;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                        ` : ''}
+                    `;
+                    programmesList.appendChild(card);
+                });
+            } else {
+                programmesList.innerHTML = '<div class="no-events">No programmes scheduled</div>';
+            }
+        }
+
+        function displayManageList() {
+            const manageList = document.getElementById('manage-list');
+            manageList.innerHTML = '';
+
+            let hasItems = false;
+
+            Object.keys(programmes).forEach(day => {
+                if (programmes[day].length > 0) {
+                    hasItems = true;
+                    programmes[day].forEach((programme, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'event-card';
+                        card.innerHTML = `
+                            <div style="font-weight: bold;">${programme.title} (${getDayName(day)})</div>
+                            <div style="color: #6a11cb;">${programme.startTime} - ${programme.endTime}</div>
+                            <div>${programme.description}</div>
+                            <div class="event-actions">
+                                <button class="action-btn" onclick="editProgramme('${day}', ${index})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn" onclick="deleteProgramme('${day}', ${index})" style="background: #ff4444;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        `;
+                        manageList.appendChild(card);
+                    });
+                }
+            });
+
+            if (events.length > 0) {
+                hasItems = true;
+                events.forEach((event, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'event-card';
+                    card.innerHTML = `
+                        <div style="font-weight: bold;">${event.title} (Event)</div>
+                        <div style="color: #6a11cb;">${formatDate(event.date)} | ${event.startTime} - ${event.endTime}</div>
+                        <div>${event.description}</div>
+                        <div class="event-actions">
+                            <button class="action-btn" onclick="deleteEvent(${index})" style="background: #ff4444;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                    manageList.appendChild(card);
+                });
+            }
+
+            if (!hasItems) {
+                manageList.innerHTML = '<div class="no-events">No programmes or events to manage</div>';
+            }
+        }
+
+        function getDayName(dayCode) {
+            const dayNames = {
+                'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday',
+                'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
+            };
+            return dayNames[dayCode] || dayCode;
+        }
+
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
+
+        // === PROGRAMME & EVENT MANAGEMENT ===
+        async function deleteProgramme(day, index) {
+            if (confirm('Delete this programme from Google Sheets?')) {
+                const programme = programmes[day][index];
+                
+                const success = await saveToSheets({
+                    type: 'Programme',
+                    title: programme.title,
+                    day: day
+                }, 'delete');
+                
+                if (success) {
+                    programmes[day].splice(index, 1);
+                    displayManageList();
+                    if (document.getElementById('view').classList.contains('active')) {
+                        displaySchedule(getCurrentDay());
+                    }
+                    logActivity(`Deleted programme: "${programme.title}"`);
+                }
+            }
+        }
+
+        async function deleteEvent(index) {
+            if (confirm('Delete this event from Google Sheets?')) {
+                const event = events[index];
+                
+                const success = await saveToSheets({
+                    type: 'Event',
+                    title: event.title,
+                    date: event.date
+                }, 'delete');
+                
+                if (success) {
+                    events.splice(index, 1);
+                    displayManageList();
+                    logActivity(`Deleted event: "${event.title}"`);
+                }
+            }
+        }
+
+        function editProgramme(day, index) {
+            if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
+                const programme = programmes[day][index];
+                document.getElementById('programme-title').value = programme.title;
+                document.getElementById('programme-description').value = programme.description;
+                document.getElementById('programme-start-time').value = programme.startTime;
+                document.getElementById('programme-end-time').value = programme.endTime;
+                
+                selectedDays = programme.days || [day];
+                document.querySelectorAll('.day-option').forEach(opt => {
+                    const optDay = opt.getAttribute('data-day');
+                    if (selectedDays.includes(optDay)) {
+                        opt.classList.add('selected');
+                    } else {
+                        opt.classList.remove('selected');
+                    }
+                });
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                document.querySelector('.tab[data-tab="add-programme"]').classList.add('active');
+                document.getElementById('add-programme').classList.add('active');
+                
+                logActivity(`Editing programme: "${programme.title}"`);
+            }
+        }
+
+        function getCurrentDay() {
+            const activeDay = document.querySelector('.day.active');
+            return activeDay ? activeDay.getAttribute('data-day') : 'mon';
+        }
+
+        function manualSync() {
+            loadDataFromSheets().then((success) => {
+                if (document.getElementById('view').classList.contains('active')) {
+                    displaySchedule(getCurrentDay());
+                }
+                if (document.getElementById('manage').classList.contains('active')) {
+                    displayManageList();
+                }
+            });
+        }
+
+        function exportToCSV() {
+            let csvContent = "Type,Title,Description,Day,Date,Start Time,End Time,Days\n";
+            
+            Object.keys(programmes).forEach(day => {
+                programmes[day].forEach(programme => {
+                    const row = [
+                        "Programme",
+                        `"${programme.title}"`,
+                        `"${programme.description}"`,
+                        day,
+                        "",
+                        programme.startTime,
+                        programme.endTime,
+                        programme.days.join(',')
+                    ];
+                    csvContent += row.join(',') + '\n';
+                });
+            });
+            
+            events.forEach(event => {
+                const row = [
+                    "Event",
+                    `"${event.title}"`,
+                    `"${event.description}"`,
+                    event.day,
+                    event.date,
+                    event.startTime,
+                    event.endTime,
+                    ""
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'programmes-events.csv';
+            link.click();
+            
+            logActivity('Exported data to CSV');
+            alert('CSV exported successfully!');
+        }
+
+        function printPage() {
+            window.print();
+            logActivity('Printed calendar');
+        }
+
+        // === UTILITY FUNCTIONS ===
+        function updateSingaporeTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-SG', { 
+                timeZone: 'Asia/Singapore',
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            });
+            document.getElementById('singapore-time').textContent = timeString;
+        }
+
+        // === INITIALIZATION ===
+        function initializeCalendar() {
+            loadDataFromSheets().then(() => {
+                setupUI();
+            });
+        }
+
+        function setupUI() {
+            setupDaySelection();
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    if (tabId === 'manage') {
+                        displayManageList();
+                    } else if (tabId === 'view') {
+                        displaySchedule(getCurrentDay());
+                    }
+                });
+            });
+
+            document.querySelectorAll('.day').forEach(day => {
+                day.addEventListener('click', () => {
+                    const dayId = day.getAttribute('data-day');
+                    document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
+                    day.classList.add('active');
+                    document.getElementById('current-day').textContent = day.textContent;
+                    displaySchedule(dayId);
+                });
+            });
+
+            // Programme form submission - SAVE TO GOOGLE SHEETS
+            document.getElementById('programme-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (currentUser !== 'admin') {
+                    alert('Only admin can add programmes');
+                    return;
+                }
+
+                const title = document.getElementById('programme-title').value;
+                const description = document.getElementById('programme-description').value;
+                const startTime = document.getElementById('programme-start-time').value;
+                const endTime = document.getElementById('programme-end-time').value;
+                
+                const daysToAdd = selectedDays.length > 0 ? selectedDays : ['mon'];
+                
+                // Save to Google Sheets
+                const success = await saveToSheets({
+                    type: 'Programme',
+                    title: title,
+                    description: description,
+                    day: daysToAdd[0], // Primary day for display
+                    startTime: startTime,
+                    endTime: endTime,
+                    days: daysToAdd.join(',')
+                }, 'add');
+                
+                if (success) {
+                    // Also update local data
+                    daysToAdd.forEach(day => {
+                        programmes[day].push({ 
+                            title, 
+                            description, 
+                            startTime, 
+                            endTime, 
+                            days: daysToAdd 
+                        });
+                    });
+                    
+                    this.reset();
+                    selectedDays = [];
+                    document.querySelectorAll('.day-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    logActivity(`Added programme to Google Sheets: "${title}"`);
+                    
+                    // Switch to view tab
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule('mon');
+                }
+            });
+
+            // Event form submission - SAVE TO GOOGLE SHEETS
+            document.getElementById('event-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (currentUser !== 'admin') {
+                    alert('Only admin can add events');
+                    return;
+                }
+
+                const title = document.getElementById('event-title').value;
+                const date = document.getElementById('event-date').value;
+                const description = document.getElementById('event-description').value;
+                const startTime = document.getElementById('event-start-time').value;
+                const endTime = document.getElementById('event-end-time').value;
+                
+                const dateObj = new Date(date);
+                const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+                const day = daysOfWeek[dateObj.getDay()];
+                
+                // Save to Google Sheets
+                const success = await saveToSheets({
+                    type: 'Event',
+                    title: title,
+                    description: description,
+                    date: date,
+                    startTime: startTime,
+                    endTime: endTime,
+                    day: day
+                }, 'add');
+                
+                if (success) {
+                    // Also update local data
+                    events.push({
+                        title,
+                        date,
+                        description,
+                        startTime,
+                        endTime,
+                        day
+                    });
+                    
+                    this.reset();
+                    logActivity(`Added event to Google Sheets: "${title}"`);
+                    
+                    // Switch to view tab
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule(getCurrentDay());
+                }
+            });
+
+            // Set min date for event form
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('event-date').min = today;
+
+            // Initial display
+            displaySchedule('mon');
+        }
+
+        // Start time updates
+        updateSingaporeTime();
+        setInterval(updateSingaporeTime, 1000);
+
+        console.log("Calendar system ready - awaiting login");
+    </script>
+</body>
+</html>
