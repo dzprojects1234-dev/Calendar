@@ -1,719 +1,522 @@
-<script>
-    // === GOOGLE SHEETS CONFIGURATION ===
-    const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU';
-    const SHEET_NAME = 'Sheet1';
-
-    // === SIMPLE DEBUGGING ===
-    console.log("Script loaded successfully");
-
-    // === SYNC STATUS ===
-    function showSyncStatus(message, type = 'info') {
-        const status = document.getElementById('sync-status');
-        const messageEl = document.getElementById('sync-message');
-        
-        if (status && messageEl) {
-            messageEl.textContent = message;
-            status.className = 'sync-status';
-            
-            if (type === 'syncing') {
-                status.classList.add('syncing');
-            } else if (type === 'error') {
-                status.classList.add('error');
-            }
-            
-            status.style.display = 'block';
-            
-            // Auto-hide after 3 seconds unless it's an error
-            if (type !== 'error') {
-                setTimeout(() => {
-                    status.style.display = 'none';
-                }, 3000);
-            }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programmes & Events Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* SIMPLIFIED CSS - Remove complex styles that might cause issues */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
         }
-    }
 
-    // === ACTIVITY LOG ===
-    let activityLog = [];
-    
-    function logActivity(message, type = 'info') {
-        const timestamp = new Date().toLocaleString('en-SG');
-        const logEntry = {
-            timestamp,
-            user: currentUser,
-            message,
-            type
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .singapore-time {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .login-modal {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .login-btn {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .user-banner {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .action-btn-large {
+            background: #fff;
+            color: #6a11cb;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .tab.active {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .content {
+            display: none;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .week-days {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .day {
+            padding: 15px 10px;
+            text-align: center;
+            background: #f5f7ff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .day.active {
+            background: #6a11cb;
+            color: white;
+        }
+
+        .events-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .event-card {
+            background: #f8faff;
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid #6a11cb;
+        }
+
+        .no-events {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-style: italic;
+        }
+
+        button {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Singapore Time Display -->
+    <div class="singapore-time">
+        <i class="fas fa-clock"></i> Singapore: 
+        <span id="singapore-time">Loading...</span>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="login-modal">
+        <div class="login-content">
+            <h2><i class="fas fa-lock"></i> Login Required</h2>
+            <input type="text" id="username" class="login-input" placeholder="Username" value="admin">
+            <input type="password" id="password" class="login-input" placeholder="Password" value="A11112">
+            <button class="login-btn" onclick="checkLogin()">Login</button>
+            <div style="color: red; margin-top: 10px; display: none;" id="login-error">Invalid username or password</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container" id="main-content" style="display: none;">
+        <header>
+            <h1>Programmes & Events Calendar</h1>
+            <div class="user-banner">
+                <i class="fas fa-user"></i> 
+                Logged in as: <span id="logged-in-user">User</span>
+            </div>
+        </header>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="action-btn-large" onclick="exportToCSV()">
+                <i class="fas fa-download"></i> Export CSV
+            </button>
+            <button class="action-btn-large" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" data-tab="view">View Schedule</div>
+            <div class="tab" data-tab="add-programme">Add Programme</div>
+            <div class="tab" data-tab="manage">Manage All</div>
+        </div>
+        
+        <!-- View Schedule Tab -->
+        <div class="content active" id="view">
+            <h2>Weekly Schedule</h2>
+            <div class="week-days">
+                <div class="day active" data-day="mon">Monday</div>
+                <div class="day" data-day="tue">Tuesday</div>
+                <div class="day" data-day="wed">Wednesday</div>
+                <div class="day" data-day="thu">Thursday</div>
+                <div class="day" data-day="fri">Friday</div>
+            </div>
+            
+            <div class="events-container">
+                <h3>Schedule for <span id="current-day">Monday</span></h3>
+                <div class="events-list" id="programmes-list">
+                    <div class="no-events">No programmes scheduled</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Programme Tab -->
+        <div class="content" id="add-programme">
+            <h2>Add New Programme</h2>
+            <form id="programme-form">
+                <div style="margin-bottom: 15px;">
+                    <label>Programme Title</label>
+                    <input type="text" id="programme-title" placeholder="e.g., Madrasah Class" required>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>Description</label>
+                    <textarea id="programme-description" placeholder="Describe the programme..."></textarea>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>Start Time</label>
+                    <input type="time" id="programme-start-time" required>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>End Time</label>
+                    <input type="time" id="programme-end-time" required>
+                </div>
+                
+                <button type="submit"><i class="fas fa-calendar-plus"></i> Add Programme</button>
+            </form>
+        </div>
+        
+        <!-- Manage All Tab -->
+        <div class="content" id="manage">
+            <h2>Manage All Programmes</h2>
+            <div class="events-list" id="manage-list">
+                <div class="no-events">No programmes to manage</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === SIMPLE VERSION - MINIMAL CODE ===
+        console.log("Script started");
+
+        // Test data - remove Google Sheets for now
+        let programmes = {
+            mon: [
+                { title: "Morning Prayer", description: "Daily prayers", startTime: "08:00", endTime: "08:30" },
+                { title: "Quran Class", description: "Quran reading session", startTime: "10:00", endTime: "11:30" }
+            ],
+            tue: [
+                { title: "Staff Meeting", description: "Weekly team meeting", startTime: "14:00", endTime: "15:00" }
+            ],
+            wed: [],
+            thu: [],
+            fri: [
+                { title: "Friday Prayers", description: "Jumu'ah prayers", startTime: "13:00", endTime: "14:00" }
+            ],
+            sat: [],
+            sun: []
         };
-        
-        activityLog.unshift(logEntry);
-        localStorage.setItem('activityLog', JSON.stringify(activityLog));
-        updateLogDisplay();
-        console.log(`LOG: ${timestamp} - ${currentUser} - ${message}`);
-    }
-    
-    function updateLogDisplay() {
-        const logEntries = document.getElementById('log-entries');
-        if (logEntries) {
-            logEntries.innerHTML = '';
-            activityLog.forEach(entry => {
-                const div = document.createElement('div');
-                div.className = 'log-entry';
-                div.innerHTML = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
-                logEntries.appendChild(div);
-            });
-        }
-    }
-    
-    function viewActivityLog() {
-        const logContainer = document.getElementById('activity-log');
-        if (logContainer) {
-            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
-            updateLogDisplay();
-        }
-    }
-    
-    function loadActivityLog() {
-        const saved = localStorage.getItem('activityLog');
-        if (saved) activityLog = JSON.parse(saved);
-    }
 
-    // === AUTHENTICATION ===
-    const VALID_USERS = {
-        'staff': '11112',
-        'admin': 'A11112'
-    };
+        let events = [];
+        let currentUser = null;
 
-    let currentUser = null;
-
-    function checkLogin() {
-        console.log("Login function called");
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const errorElement = document.getElementById('login-error');
-
-        if (VALID_USERS[username] && VALID_USERS[username] === password) {
-            currentUser = username;
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            document.getElementById('logged-in-user').textContent = username;
+        // === BASIC FUNCTIONS ===
+        function checkLogin() {
+            console.log("Login attempt");
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
             
-            logActivity('Logged in successfully', 'success');
-            initializeCalendar();
-        } else {
-            errorElement.style.display = 'block';
-            console.log("Login failed");
-        }
-    }
-
-    function logout() {
-        logActivity('Logged out', 'info');
-        currentUser = null;
-        document.getElementById('login-modal').style.display = 'flex';
-        document.getElementById('main-content').style.display = 'none';
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
-        document.getElementById('login-error').style.display = 'none';
-    }
-
-    // === DAY SELECTION SYSTEM ===
-    function initializeDaySelection() {
-        console.log("Initializing day selection");
-        
-        const dayOptions = document.querySelectorAll('#programme-days-selection .day-option');
-        console.log("Found day options:", dayOptions.length);
-        
-        dayOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                console.log("Day option clicked:", this.getAttribute('data-day'));
-                const day = this.getAttribute('data-day');
-                
-                if (day === 'daily') {
-                    // Select only daily, deselect others
-                    dayOptions.forEach(opt => {
-                        if (opt.getAttribute('data-day') === 'daily') {
-                            opt.classList.add('selected');
-                        } else {
-                            opt.classList.remove('selected');
-                        }
-                    });
-                } else {
-                    // Deselect daily if it's selected
-                    document.querySelector('#programme-days-selection .day-option.daily').classList.remove('selected');
-                    // Toggle this day
-                    this.classList.toggle('selected');
-                }
-                
-                console.log("Selected days:", getSelectedDays());
-            });
-        });
-    }
-
-    function getSelectedDays() {
-        const selectedOptions = document.querySelectorAll('#programme-days-selection .day-option.selected');
-        const selectedDays = [];
-        
-        selectedOptions.forEach(option => {
-            const day = option.getAttribute('data-day');
-            if (day === 'daily') {
-                return ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            if ((username === 'admin' && password === 'A11112') || 
+                (username === 'staff' && password === '11112')) {
+                currentUser = username;
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('logged-in-user').textContent = username;
+                initializeCalendar();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
             }
-            selectedDays.push(day);
-        });
-        
-        console.log("getSelectedDays returning:", selectedDays);
-        return selectedDays;
-    }
-
-    // === CALENDAR DATA ===
-    let programmes = {
-        mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
-    };
-
-    let events = [];
-
-    // === GOOGLE SHEETS INTEGRATION ===
-    async function loadDataFromSheets() {
-        showSyncStatus('Loading data from cloud...', 'syncing');
-        
-        try {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq&sheet=${SHEET_NAME}`;
-            console.log("Loading from URL:", url);
-            
-            const response = await fetch(url);
-            const text = await response.text();
-            const jsonStr = text.replace(/^.*?\(/, '').replace(/\)$/, '');
-            const json = JSON.parse(jsonStr);
-            
-            console.log("=== GOOGLE SHEETS DATA ===");
-            
-            if (json.table && json.table.rows) {
-                console.log(`Found ${json.table.rows.length} rows`);
-                
-                // Reset data
-                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-                events = [];
-                
-                json.table.rows.forEach((row, index) => {
-                    // Skip header row
-                    if (index === 0) return;
-                    
-                    if (!row.c) return; // Skip empty rows
-                    
-                    const type = row.c[0]?.v || '';
-                    const title = row.c[1]?.v || '';
-                    const description = row.c[2]?.v || '';
-                    const day = (row.c[3]?.v || '').toLowerCase();
-                    const date = row.c[4]?.v || '';
-                    const startTime = row.c[5]?.v || '';
-                    const endTime = row.c[6]?.v || '';
-                    const days = row.c[7]?.v || '';
-                    
-                    console.log(`Row ${index}:`, { type, title, day });
-                    
-                    if (type === 'Programme' && title) {
-                        const programmeDays = days ? 
-                            days.split(',').map(d => d.trim().toLowerCase()) : 
-                            [day];
-                        
-                        programmeDays.forEach(progDay => {
-                            if (programmes[progDay]) {
-                                programmes[progDay].push({
-                                    title,
-                                    description,
-                                    startTime,
-                                    endTime,
-                                    days: programmeDays
-                                });
-                                console.log(`Added programme to ${progDay}: ${title}`);
-                            }
-                        });
-                    } else if (type === 'Event' && title) {
-                        events.push({
-                            title,
-                            description,
-                            date,
-                            startTime,
-                            endTime,
-                            day
-                        });
-                        console.log(`Added event: ${title}`);
-                    }
-                });
-                
-                const programmeCount = Object.values(programmes).flat().length;
-                showSyncStatus(`Loaded ${programmeCount} programmes, ${events.length} events`, 'info');
-            }
-            
-            saveDataToLocalStorage();
-            
-        } catch (error) {
-            console.error("Error loading from Google Sheets:", error);
-            showSyncStatus('Error loading cloud data', 'error');
-            loadDataFromLocalStorage();
-        }
-    }
-
-    function loadDataFromLocalStorage() {
-        const savedProgrammes = localStorage.getItem('programmesData');
-        const savedEvents = localStorage.getItem('eventsData');
-        
-        if (savedProgrammes) programmes = JSON.parse(savedProgrammes);
-        if (savedEvents) events = JSON.parse(savedEvents);
-        
-        console.log("Data loaded from localStorage:", { programmes, events });
-    }
-
-    function saveDataToLocalStorage() {
-        localStorage.setItem('programmesData', JSON.stringify(programmes));
-        localStorage.setItem('eventsData', JSON.stringify(events));
-    }
-
-    function saveDataToSheets() {
-        // For now, just save to localStorage
-        saveDataToLocalStorage();
-        showSyncStatus('Data saved locally', 'info');
-    }
-
-    function manualSync() {
-        loadDataFromSheets().then(() => {
-            displaySchedule(getCurrentDay());
-            if (document.getElementById('manage').classList.contains('active')) {
-                displayManageList();
-            }
-        });
-    }
-
-    // === FORM SUBMISSIONS ===
-    document.addEventListener('DOMContentLoaded', function() {
-        const programmeForm = document.getElementById('programme-form');
-        const eventForm = document.getElementById('event-form');
-        
-        if (programmeForm) {
-            programmeForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                console.log("Programme form submitted");
-                
-                if (currentUser !== 'admin') {
-                    alert('You do not have permission to add programmes.');
-                    return;
-                }
-
-                const selectedDays = getSelectedDays();
-                console.log("Selected days for programme:", selectedDays);
-                
-                if (selectedDays.length === 0) {
-                    alert('Please select at least one day for the programme.');
-                    return;
-                }
-
-                const title = document.getElementById('programme-title').value;
-                const description = document.getElementById('programme-description').value;
-                const startTime = document.getElementById('programme-start-time').value;
-                const endTime = document.getElementById('programme-end-time').value;
-
-                const newProgramme = {
-                    title,
-                    description,
-                    startTime,
-                    endTime,
-                    days: selectedDays
-                };
-
-                // Add to each selected day
-                selectedDays.forEach(day => {
-                    programmes[day].push(newProgramme);
-                });
-
-                saveDataToSheets();
-                programmeForm.reset();
-                
-                // Clear day selections
-                document.querySelectorAll('#programme-days-selection .day-option.selected').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-
-                logActivity(`Added programme: "${title}"`, 'success');
-                alert('Programme added successfully!');
-                switchToViewTab('mon');
-            });
         }
 
-        if (eventForm) {
-            eventForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                if (currentUser !== 'admin') {
-                    alert('You do not have permission to add events.');
-                    return;
-                }
-
-                const title = document.getElementById('event-title').value;
-                const date = document.getElementById('event-date').value;
-                const description = document.getElementById('event-description').value;
-                const startTime = document.getElementById('event-start-time').value;
-                const endTime = document.getElementById('event-end-time').value;
-                
-                // Get day of week from date
-                const dateObj = new Date(date);
-                const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                const day = daysOfWeek[dateObj.getDay()];
-                
-                const newEvent = {
-                    title,
-                    date,
-                    description,
-                    startTime,
-                    endTime,
-                    day
-                };
-
-                events.push(newEvent);
-                saveDataToSheets();
-                eventForm.reset();
-                
-                logActivity(`Added event: "${title}"`, 'success');
-                alert('Event added successfully!');
-            });
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'none';
         }
-    });
 
-    // === CSV EXPORT FUNCTION ===
-    function exportToCSV() {
-        console.log("Exporting to CSV...");
-        
-        let csvContent = "Type,Title,Description,Day,Date,Start Time,End Time,Days\n";
-        
-        // Export programmes
-        Object.keys(programmes).forEach(day => {
-            programmes[day].forEach(programme => {
-                const escapeCSV = (text) => {
-                    if (!text) return '';
-                    return `"${text.toString().replace(/"/g, '""')}"`;
-                };
-                
-                const row = [
-                    "Programme",
-                    escapeCSV(programme.title),
-                    escapeCSV(programme.description),
-                    day,
-                    "", // No date for programmes
-                    programme.startTime,
-                    programme.endTime,
-                    programme.days ? programme.days.join(', ') : day
-                ];
-                csvContent += row.join(',') + '\n';
-            });
-        });
-        
-        // Export events
-        events.forEach(event => {
-            const escapeCSV = (text) => {
-                if (!text) return '';
-                return `"${text.toString().replace(/"/g, '""')}"`;
-            };
-            
-            const row = [
-                "Event",
-                escapeCSV(event.title),
-                escapeCSV(event.description),
-                event.day,
-                event.date,
-                event.startTime,
-                event.endTime,
-                "" // No days for events
-            ];
-            csvContent += row.join(',') + '\n';
-        });
-        
-        // Create and download the file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        
-        const today = new Date();
-        const dateString = today.toISOString().split('T')[0];
-        const filename = `programmes-events-${dateString}.csv`;
-        
-        if (navigator.msSaveBlob) {
-            navigator.msSaveBlob(blob, filename);
-        } else {
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        logActivity('Exported data to CSV', 'success');
-        console.log("CSV export completed");
-    }
+        function displaySchedule(day = 'mon') {
+            const programmesList = document.getElementById('programmes-list');
+            programmesList.innerHTML = '';
 
-    // === DISPLAY FUNCTIONS ===
-    function displaySchedule(day = 'mon') {
-        const programmesList = document.getElementById('programmes-list');
-        if (!programmesList) return;
-        
-        programmesList.innerHTML = '';
-
-        if (programmes[day] && programmes[day].length > 0) {
-            programmes[day].forEach((programme, index) => {
-                const card = document.createElement('div');
-                card.className = 'event-card';
-                card.innerHTML = `
-                    <div class="event-title">${programme.title}</div>
-                    <div class="event-time">${programme.startTime} - ${programme.endTime}</div>
-                    <div class="event-desc">${programme.description}</div>
-                    <div class="event-actions">
-                        <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteProgramme('${day}', ${index})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                `;
-                programmesList.appendChild(card);
-            });
-        } else {
-            programmesList.innerHTML = '<div class="no-events">No programmes scheduled</div>';
-        }
-    }
-
-    function displayManageList() {
-        const manageList = document.getElementById('manage-list');
-        if (!manageList) return;
-        
-        manageList.innerHTML = '';
-
-        let hasItems = false;
-
-        // Display programmes
-        Object.keys(programmes).forEach(day => {
-            if (programmes[day].length > 0) {
-                hasItems = true;
+            if (programmes[day] && programmes[day].length > 0) {
                 programmes[day].forEach((programme, index) => {
                     const card = document.createElement('div');
                     card.className = 'event-card';
                     card.innerHTML = `
-                        <div class="event-title">${programme.title} (${getDayName(day)})</div>
-                        <div class="event-time">${programme.startTime} - ${programme.endTime}</div>
-                        <div class="event-desc">${programme.description}</div>
-                        <div class="event-days">Days: ${programme.days ? programme.days.map(d => getDayName(d)).join(', ') : getDayName(day)}</div>
-                        <div class="event-actions">
-                            <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            <button class="action-btn delete-btn" onclick="deleteProgramme('${day}', ${index})">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
+                        <div style="font-weight: bold; font-size: 18px;">${programme.title}</div>
+                        <div style="color: #6a11cb; margin: 5px 0;">${programme.startTime} - ${programme.endTime}</div>
+                        <div>${programme.description}</div>
                     `;
-                    manageList.appendChild(card);
+                    programmesList.appendChild(card);
                 });
+            } else {
+                programmesList.innerHTML = '<div class="no-events">No programmes scheduled</div>';
             }
-        });
-
-        // Display events
-        if (events.length > 0) {
-            hasItems = true;
-            events.forEach((event, index) => {
-                const card = document.createElement('div');
-                card.className = 'event-card';
-                card.innerHTML = `
-                    <div class="event-title">${event.title}</div>
-                    <div class="event-date">${formatDate(event.date)}</div>
-                    <div class="event-time">${event.startTime} - ${event.endTime}</div>
-                    <div class="event-desc">${event.description}</div>
-                    <div class="event-actions">
-                        <button class="action-btn delete-btn" onclick="deleteEvent(${index})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                `;
-                manageList.appendChild(card);
-            });
         }
 
-        if (!hasItems) {
-            manageList.innerHTML = '<div class="no-events">No programmes or events to manage</div>';
-        }
-    }
+        function displayManageList() {
+            const manageList = document.getElementById('manage-list');
+            manageList.innerHTML = '';
 
-    // Helper function to get day name
-    function getDayName(dayCode) {
-        const dayNames = {
-            'mon': 'Monday',
-            'tue': 'Tuesday', 
-            'wed': 'Wednesday',
-            'thu': 'Thursday',
-            'fri': 'Friday',
-            'sat': 'Saturday',
-            'sun': 'Sunday'
-        };
-        return dayNames[dayCode] || dayCode;
-    }
-
-    // Helper function to format date
-    function formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('en-US', options);
-    }
-
-    // === EDIT/DELETE FUNCTIONS ===
-    window.editProgramme = function(day, index) {
-        if (currentUser !== 'admin') {
-            alert('You do not have permission to edit programmes.');
-            return;
-        }
-        if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
-            const programmeTitle = programmes[day][index].title;
-            programmes[day].splice(index, 1);
-            saveDataToSheets();
-            displaySchedule(day);
-            displayManageList();
-            logActivity(`Edited programme: "${programmeTitle}"`, 'info');
-            alert('Programme deleted. You can now re-add it with your changes.');
-        }
-    }
-
-    window.deleteProgramme = function(day, index) {
-        if (currentUser !== 'admin') {
-            alert('You do not have permission to delete programmes.');
-            return;
-        }
-        if (confirm('Delete this programme?')) {
-            const programmeTitle = programmes[day][index].title;
-            programmes[day].splice(index, 1);
-            saveDataToSheets();
-            displaySchedule(day);
-            displayManageList();
-            logActivity(`Deleted programme: "${programmeTitle}"`, 'warning');
-        }
-    }
-
-    window.deleteEvent = function(index) {
-        if (currentUser !== 'admin') {
-            alert('You do not have permission to delete events.');
-            return;
-        }
-        if (confirm('Delete this event?')) {
-            const eventTitle = events[index].title;
-            events.splice(index, 1);
-            saveDataToSheets();
-            displayManageList();
-            logActivity(`Deleted event: "${eventTitle}"`, 'warning');
-        }
-    }
-
-    // === UTILITY FUNCTIONS ===
-    function switchToViewTab(day) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelector('.tab[data-tab="view"]').classList.add('active');
-        
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        document.getElementById('view').classList.add('active');
-        
-        document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
-        document.querySelector(`.day[data-day="${day}"]`).classList.add('active');
-        
-        document.getElementById('current-day').textContent = document.querySelector(`.day[data-day="${day}"]`).textContent;
-        displaySchedule(day);
-    }
-
-    function printPage() {
-        window.print();
-        logActivity('Printed calendar', 'info');
-    }
-
-    // === TAB SYSTEM ===
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            
-            if (tabId === 'manage') {
-                displayManageList();
-            }
-        });
-    });
-
-    // === DAY CLICK SYSTEM ===
-    document.querySelectorAll('.day').forEach(day => {
-        day.addEventListener('click', () => {
-            const dayId = day.getAttribute('data-day');
-            
-            document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
-            day.classList.add('active');
-            
-            document.getElementById('current-day').textContent = day.textContent;
-            displaySchedule(dayId);
-        });
-    });
-
-    // === TIME DISPLAY ===
-    function updateSingaporeTime() {
-        const now = new Date();
-        const options = { 
-            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit',
-            timeZone: 'Asia/Singapore'
-        };
-        const timeString = now.toLocaleDateString('en-SG', options);
-        const timeElement = document.getElementById('singapore-time');
-        if (timeElement) {
-            timeElement.textContent = timeString;
-        }
-    }
-
-    // === INITIALIZATION ===
-    function initializeCalendar() {
-        console.log("Initializing calendar");
-        loadActivityLog();
-        initializeDaySelection();
-        
-        // Load data from Google Sheets (or localStorage fallback)
-        loadDataFromSheets().then(() => {
-            displaySchedule('mon');
-        });
-        
-        // Set up admin permissions
-        if (currentUser !== 'admin') {
-            document.querySelectorAll('.event-actions').forEach(actions => {
-                actions.style.display = 'none';
-            });
-        }
-        
-        // Set min date for event form
-        const today = new Date().toISOString().split('T')[0];
-        const eventDateInput = document.getElementById('event-date');
-        if (eventDateInput) {
-            eventDateInput.min = today;
-        }
-        
-        // Auto-refresh data every 60 seconds
-        setInterval(() => {
-            loadDataFromSheets().then(() => {
-                const currentDay = getCurrentDay();
-                displaySchedule(currentDay);
-                if (document.getElementById('manage') && document.getElementById('manage').classList.contains('active')) {
-                    displayManageList();
+            let hasItems = false;
+            Object.keys(programmes).forEach(day => {
+                if (programmes[day].length > 0) {
+                    hasItems = true;
+                    programmes[day].forEach((programme, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'event-card';
+                        card.innerHTML = `
+                            <div style="font-weight: bold;">${programme.title} (${getDayName(day)})</div>
+                            <div style="color: #6a11cb;">${programme.startTime} - ${programme.endTime}</div>
+                            <div>${programme.description}</div>
+                            <div style="margin-top: 10px;">
+                                <button onclick="deleteProgramme('${day}', ${index})" style="background: #ff4444;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        `;
+                        manageList.appendChild(card);
+                    });
                 }
             });
-        }, 60000);
-    }
 
-    function getCurrentDay() {
-        const activeDay = document.querySelector('.day.active');
-        return activeDay ? activeDay.getAttribute('data-day') : 'mon';
-    }
+            if (!hasItems) {
+                manageList.innerHTML = '<div class="no-events">No programmes to manage</div>';
+            }
+        }
 
-    // Start time updates
-    updateSingaporeTime();
-    setInterval(updateSingaporeTime, 1000);
+        function getDayName(dayCode) {
+            const dayNames = {
+                'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday',
+                'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
+            };
+            return dayNames[dayCode] || dayCode;
+        }
 
-    // Initial log
-    console.log("Calendar system initialized");
-</script>
+        function deleteProgramme(day, index) {
+            if (confirm('Delete this programme?')) {
+                programmes[day].splice(index, 1);
+                displayManageList();
+                if (document.getElementById('view').classList.contains('active')) {
+                    displaySchedule(getCurrentDay());
+                }
+            }
+        }
+
+        function getCurrentDay() {
+            const activeDay = document.querySelector('.day.active');
+            return activeDay ? activeDay.getAttribute('data-day') : 'mon';
+        }
+
+        function exportToCSV() {
+            alert('CSV export would happen here');
+        }
+
+        function updateSingaporeTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-SG', { 
+                timeZone: 'Asia/Singapore',
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            });
+            document.getElementById('singapore-time').textContent = timeString;
+        }
+
+        // === INITIALIZATION ===
+        function initializeCalendar() {
+            console.log("Initializing calendar");
+            
+            // Tab system
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    if (tabId === 'manage') {
+                        displayManageList();
+                    } else if (tabId === 'view') {
+                        displaySchedule(getCurrentDay());
+                    }
+                });
+            });
+
+            // Day click system
+            document.querySelectorAll('.day').forEach(day => {
+                day.addEventListener('click', () => {
+                    const dayId = day.getAttribute('data-day');
+                    document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
+                    day.classList.add('active');
+                    document.getElementById('current-day').textContent = day.textContent;
+                    displaySchedule(dayId);
+                });
+            });
+
+            // Form submission
+            document.getElementById('programme-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const title = document.getElementById('programme-title').value;
+                const description = document.getElementById('programme-description').value;
+                const startTime = document.getElementById('programme-start-time').value;
+                const endTime = document.getElementById('programme-end-time').value;
+                
+                // For simplicity, add to Monday only
+                programmes.mon.push({ title, description, startTime, endTime });
+                
+                this.reset();
+                alert('Programme added to Monday!');
+                displaySchedule('mon');
+            });
+
+            // Initial display
+            displaySchedule('mon');
+        }
+
+        // Start time updates
+        updateSingaporeTime();
+        setInterval(updateSingaporeTime, 1000);
+
+        // Auto-login for testing (remove in production)
+        setTimeout(() => {
+            if (document.getElementById('login-modal').style.display !== 'none') {
+                document.getElementById('username').value = 'admin';
+                document.getElementById('password').value = 'A11112';
+                checkLogin();
+            }
+        }, 1000);
+
+        console.log("Script loaded successfully");
+    </script>
+</body>
+</html>
