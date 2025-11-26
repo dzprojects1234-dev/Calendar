@@ -743,98 +743,100 @@
 
         // === ENHANCED GOOGLE SHEETS INTEGRATION ===
         async function loadDataFromSheets() {
-            if (SHEET_ID === '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU/edit?gid=0#gid=0') { // Make sure this matches your Sheet ID
-                console.log("Google Sheets configured - loading data...");
-            }
-
             showSyncStatus('Loading data from cloud...', 'syncing');
             
             try {
-                // Enhanced URL for better compatibility
-                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq&sheet=${SHEET_NAME}`;
-                console.log("Loading from URL:", url);
+                const url = `https://docs.google.com/spreadsheets/d/1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU/edit?gid=0#gid=0/gviz/tq?tqx=out:json&tq&sheet=${SHEET1}`;
                 
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
                 const text = await response.text();
-                console.log("Raw response:", text.substring(0, 200)); // Log first 200 chars
+                const jsonStr = text.replace(/^.*?\(/, '').replace(/\)$/, '');
+                const json = JSON.parse(jsonStr);
                 
-                // More robust JSON parsing
-                let json;
-                try {
-                    const jsonStr = text.replace(/^.*?\(/, '').replace(/\)$/, '');
-                    json = JSON.parse(jsonStr);
-                } catch (parseError) {
-                    console.error("JSON parse error:", parseError);
-                    throw new Error('Invalid JSON response from Google Sheets');
-                }
+                // DEBUG: Show what we received
+                console.log("=== GOOGLE SHEETS DATA ===");
+                console.log("Full JSON response:", json);
                 
-                // Reset data
-                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-                events = [];
-                
-                if (json.table && json.table.rows && json.table.rows.length > 0) {
-                    console.log(`Found ${json.table.rows.length} rows in sheet`);
+                if (json.table && json.table.rows) {
+                    console.log(`Found ${json.table.rows.length} rows`);
+                    
+                    // Reset data
+                    programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                    events = [];
                     
                     json.table.rows.forEach((row, index) => {
-                        // Skip header row (index 0)
-                        if (index === 0) return;
+                        console.log(`--- Row ${index} ---`);
                         
-                        if (!row.c) return; // Skip empty rows
-                        
-                        const type = row.c[0]?.v || '';
-                        const title = row.c[1]?.v || '';
-                        const description = row.c[2]?.v || '';
-                        const day = row.c[3]?.v || '';
-                        const date = row.c[4]?.v || '';
-                        const startTime = row.c[5]?.v || '';
-                        const endTime = row.c[6]?.v || '';
-                        const days = row.c[7]?.v || '';
-
-                        console.log(`Row ${index}:`, { type, title, day });
-                        
-                        if (type === 'Programme' && title) {
-                            const programmeDays = days ? days.split(',').map(d => d.trim().toLowerCase()) : [day.toLowerCase()];
-                            
-                            programmeDays.forEach(progDay => {
-                                if (programmes[progDay]) {
-                                    programmes[progDay].push({
-                                        title,
-                                        description,
-                                        startTime,
-                                        endTime,
-                                        days: programmeDays
-                                    });
-                                }
+                        // Log all cells in this row
+                        if (row.c) {
+                            row.c.forEach((cell, cellIndex) => {
+                                console.log(`Column ${cellIndex}:`, cell?.v);
                             });
-                        } else if (type === 'Event' && title) {
-                            events.push({
-                                title,
-                                description,
-                                date,
-                                startTime,
-                                endTime,
-                                day: day.toLowerCase()
-                            });
+                        }
+                        
+                        // Try to parse data (more flexible approach)
+                        if (index === 0) return; // Skip header row
+                        
+                        const cells = row.c || [];
+                        const type = cells[0]?.v || '';
+                        const title = cells[1]?.v || '';
+                        const description = cells[2]?.v || '';
+                        const day = (cells[3]?.v || '').toLowerCase();
+                        const date = cells[4]?.v || '';
+                        const startTime = cells[5]?.v || '';
+                        const endTime = cells[6]?.v || '';
+                        const days = cells[7]?.v || '';
+                        
+                        console.log(`Parsed: ${type} - "${title}" - day:${day}`);
+                        
+                        if (title) {
+                            if (type === 'Programme' || (!type && day)) {
+                                // It's a programme
+                                const programmeDays = days ? 
+                                    days.split(',').map(d => d.trim().toLowerCase()) : 
+                                    [day];
+                                
+                                programmeDays.forEach(progDay => {
+                                    if (programmes[progDay]) {
+                                        programmes[progDay].push({
+                                            title,
+                                            description,
+                                            startTime,
+                                            endTime,
+                                            days: programmeDays
+                                        });
+                                        console.log(`Added programme to ${progDay}: ${title}`);
+                                    }
+                                });
+                            } else if (type === 'Event' || date) {
+                                // It's an event
+                                events.push({
+                                    title,
+                                    description,
+                                    date,
+                                    startTime,
+                                    endTime,
+                                    day
+                                });
+                                console.log(`Added event: ${title}`);
+                            }
                         }
                     });
                     
-                    showSyncStatus(`Loaded ${Object.values(programmes).flat().length} programmes, ${events.length} events`, 'info');
-                } else {
-                    showSyncStatus('Sheet is empty. Add data to get started!', 'info');
-                    // Add sample data if sheet is empty
-                    addSampleData();
+                    // DEBUG: Show what we loaded
+                    console.log("=== LOADED DATA ===");
+                    console.log("Programmes:", programmes);
+                    console.log("Events:", events);
+                    
+                    const programmeCount = Object.values(programmes).flat().length;
+                    showSyncStatus(`Loaded ${programmeCount} programmes, ${events.length} events`, 'info');
                 }
                 
-                // Save to localStorage as backup
                 saveDataToLocalStorage();
                 
             } catch (error) {
-                console.error("Error loading from Google Sheets:", error);
-                showSyncStatus('Using local data. Check sheet sharing settings.', 'error');
+                console.error("Error:", error);
+                showSyncStatus('Using local data', 'error');
                 loadDataFromLocalStorage();
             }
         }
