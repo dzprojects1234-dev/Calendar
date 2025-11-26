@@ -565,10 +565,8 @@
     </div>
 
     <script>
-// === GOOGLE SHEETS CONFIGURATION ===
-// Use the correct URL (only one /exec)
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWNBJmwifx8vNNvrwfal10ClPfn58XzXmMtvD8tjIiFSpqPDQpYRRAZyffx96_qjvvZQ/exec';
-
+        // === GOOGLE SHEETS CONFIGURATION ===
+        const SHEET_ID = '1lHJlL1yVtN96_pDbCK4kBJWl_6KFlWcqnifDhI69GmU';
         
         // === CALENDAR DATA ===
         let programmes = {
@@ -579,169 +577,126 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWNBJmwifx8vNN
         let activityLog = [];
         let selectedDays = [];
 
-
-
-
-        // === GOOGLE SHEETS LOADING ===
-
-async function loadDataFromSheets() {
-    console.log("Loading data from Google Sheets via Apps Script...");
-    showSyncStatus("Syncing with Google Sheets...", "info");
-    
-    try {
-        // Use a CORS proxy to bypass restrictions
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const targetUrl = APPS_SCRIPT_URL;
-        
-        const response = await fetch(proxyUrl + targetUrl);
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        
-        const data = await response.json();
-        
-        // Reset data
-        programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-        events = [];
-        
-        if (data && data.length > 0) {
-            console.log(`Found ${data.length} rows in sheet`);
+        // === GOOGLE SHEETS LOADING (CSV SOLUTION) ===
+        async function loadDataFromSheets() {
+            console.log("Loading data from Google Sheets CSV export...");
+            showSyncStatus("Syncing with Google Sheets...", "info");
             
-            data.forEach((row, index) => {
-                // Skip header row
-                if (index === 0) return;
+            try {
+                // Direct CSV export from Google Sheets (no authentication needed)
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
                 
-                const type = row[0] || '';
-                const title = row[1] || '';
-                const description = row[2] || '';
-                const day = (row[3] || '').toLowerCase();
-                const date = row[4] || '';
-                const startTime = row[5] || '';
-                const endTime = row[6] || '';
-                const days = row[7] || '';
+                const response = await fetch(csvUrl);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch CSV: ' + response.status);
+                }
                 
-                if (type === 'Programme' && title && day) {
-                    const programmeDays = days ? 
-                        days.split(',').map(d => d.trim().toLowerCase()) : 
-                        [day];
+                const csvText = await response.text();
+                console.log("Raw CSV data received");
+                
+                // Parse CSV data
+                const rows = parseCSV(csvText);
+                
+                // Reset data
+                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                events = [];
+                
+                if (rows && rows.length > 0) {
+                    console.log(`Found ${rows.length} rows in sheet`);
                     
-                    programmeDays.forEach(progDay => {
-                        if (programmes[progDay] !== undefined) {
-                            programmes[progDay].push({
+                    rows.forEach((row, index) => {
+                        // Skip header row
+                        if (index === 0) return;
+                        
+                        const type = row[0] || '';
+                        const title = row[1] || '';
+                        const description = row[2] || '';
+                        const day = (row[3] || '').toLowerCase();
+                        const date = row[4] || '';
+                        const startTime = row[5] || '';
+                        const endTime = row[6] || '';
+                        const days = row[7] || '';
+                        
+                        if (type === 'Programme' && title && day) {
+                            const programmeDays = days ? 
+                                days.split(',').map(d => d.trim().toLowerCase()) : 
+                                [day];
+                            
+                            programmeDays.forEach(progDay => {
+                                if (programmes[progDay] !== undefined) {
+                                    programmes[progDay].push({
+                                        title,
+                                        description: description || '',
+                                        startTime: startTime || '',
+                                        endTime: endTime || '',
+                                        days: programmeDays
+                                    });
+                                }
+                            });
+                        } else if (type === 'Event' && title) {
+                            events.push({
                                 title,
                                 description: description || '',
+                                date: date || '',
                                 startTime: startTime || '',
                                 endTime: endTime || '',
-                                days: programmeDays
+                                day: day || ''
                             });
                         }
                     });
-                } else if (type === 'Event' && title) {
-                    events.push({
-                        title,
-                        description: description || '',
-                        date: date || '',
-                        startTime: startTime || '',
-                        endTime: endTime || '',
-                        day: day || ''
-                    });
+                    
+                    console.log("Successfully loaded from Google Sheets CSV");
+                    showSyncStatus("Data synced successfully from Google Sheets!", "success");
+                    logActivity('Data loaded from Google Sheets CSV');
+                    return true;
+                    
+                } else {
+                    console.log("No data found in CSV");
+                    showSyncStatus("No data found in Google Sheets", "error");
+                    loadSampleData();
+                    return false;
                 }
+                
+            } catch (error) {
+                console.error("Error loading from Google Sheets CSV:", error);
+                showSyncStatus("Error: " + error.message, "error");
+                loadSampleData();
+                logActivity('Error loading Google Sheets CSV, using sample data');
+                return false;
+            }
+        }
+
+        function parseCSV(csvText) {
+            const rows = [];
+            const lines = csvText.split('\n');
+            
+            lines.forEach(line => {
+                if (line.trim() === '') return; // Skip empty lines
+                
+                const row = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                // Add the last field
+                row.push(current.trim());
+                rows.push(row);
             });
             
-            console.log("Successfully loaded from Google Sheets");
-            showSyncStatus("Data synced successfully from Google Sheets!", "success");
-            logActivity('Data loaded from Google Sheets');
-            return true;
-            
-        } else {
-            console.log("No data found in Google Sheets");
-            showSyncStatus("No data found in Google Sheets", "error");
-            loadSampleData();
-            return false;
+            return rows;
         }
-        
-    } catch (error) {
-        console.error("Error loading from Google Sheets:", error);
-        showSyncStatus("Error: " + error.message, "error");
-        loadSampleData();
-        logActivity('Error loading Google Sheets, using sample data');
-        return false;
-    }
-}
-
-
-
-// Add this global function to process the data
-window.processSheetData = function(data) {
-    console.log("Data received from Google Sheets:", data);
-    window.sheetDataLoaded = true;
-    
-    // Reset data
-    programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-    events = [];
-    
-    if (data && data.length > 0) {
-        console.log(`Found ${data.length} rows in sheet`);
-        
-        data.forEach((row, index) => {
-            // Skip header row
-            if (index === 0) return;
-            
-            const type = row[0] || '';
-            const title = row[1] || '';
-            const description = row[2] || '';
-            const day = (row[3] || '').toLowerCase();
-            const date = row[4] || '';
-            const startTime = row[5] || '';
-            const endTime = row[6] || '';
-            const days = row[7] || '';
-            
-            if (type === 'Programme' && title && day) {
-                const programmeDays = days ? 
-                    days.split(',').map(d => d.trim().toLowerCase()) : 
-                    [day];
-                
-                programmeDays.forEach(progDay => {
-                    if (programmes[progDay] !== undefined) {
-                        programmes[progDay].push({
-                            title,
-                            description: description || '',
-                            startTime: startTime || '',
-                            endTime: endTime || '',
-                            days: programmeDays
-                        });
-                    }
-                });
-            } else if (type === 'Event' && title) {
-                events.push({
-                    title,
-                    description: description || '',
-                    date: date || '',
-                    startTime: startTime || '',
-                    endTime: endTime || '',
-                    day: day || ''
-                });
-            }
-        });
-        
-        console.log("Successfully loaded from Google Sheets");
-        showSyncStatus("Data synced successfully from Google Sheets!", "success");
-        logActivity('Data loaded from Google Sheets');
-        
-        // Refresh the display
-        if (document.getElementById('view').classList.contains('active')) {
-            displaySchedule(getCurrentDay());
-        }
-        if (document.getElementById('manage').classList.contains('active')) {
-            displayManageList();
-        }
-    } else {
-        console.log("No data found in Google Sheets");
-        showSyncStatus("No data found in Google Sheets", "error");
-        loadSampleData();
-    }
-};
-
 
         function loadSampleData() {
             programmes = {
@@ -790,8 +745,8 @@ window.processSheetData = function(data) {
             const password = document.getElementById('password').value;
             const errorElement = document.getElementById('login-error');
 
-            if ((username === 'admin' && password === 'A11112') || 
-                (username === 'staff' && password === '11112')) {
+            if ((username === 'admin' && password === 'A112') || 
+                (username === 'staff' && password === '112')) {
                 currentUser = username;
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('main-content').style.display = 'block';
