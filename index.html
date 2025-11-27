@@ -202,82 +202,61 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        .week-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
 
-
-
-
-
-
-
-
-
-
-
-.week-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    margin-bottom: 20px;
-    overflow-x: auto;
-}
-
-.day {
-    padding: 12px 5px;
-    text-align: center;
-    background: #f5f7ff;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 14px;
-    min-width: 0; /* Important for text overflow */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* For mobile devices */
-@media (max-width: 768px) {
-    .week-days {
-        grid-template-columns: repeat(7, minmax(60px, 1fr));
-        gap: 5px;
-    }
-    
-    .day {
-        padding: 10px 3px;
-        font-size: 12px;
-    }
-    
-    /* Shorter day names for very small screens */
-    @media (max-width: 480px) {
-        .day[data-day="mon"]::after { content: "Mon"; }
-        .day[data-day="tue"]::after { content: "Tue"; }
-        .day[data-day="wed"]::after { content: "Wed"; }
-        .day[data-day="thu"]::after { content: "Thu"; }
-        .day[data-day="fri"]::after { content: "Fri"; }
-        .day[data-day="sat"]::after { content: "Sat"; }
-        .day[data-day="sun"]::after { content: "Sun"; }
-        
         .day {
-            font-size: 11px;
-            padding: 8px 2px;
+            padding: 12px 5px;
+            text-align: center;
+            background: #f5f7ff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 0; /* Important for text overflow */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        
-        .day span {
-            display: none; /* Hide the original text */
+
+        /* For mobile devices */
+        @media (max-width: 768px) {
+            .week-days {
+                grid-template-columns: repeat(7, minmax(60px, 1fr));
+                gap: 5px;
+            }
+            
+            .day {
+                padding: 10px 3px;
+                font-size: 12px;
+            }
+            
+            /* Shorter day names for very small screens */
+            @media (max-width: 480px) {
+                .day[data-day="mon"]::after { content: "Mon"; }
+                .day[data-day="tue"]::after { content: "Tue"; }
+                .day[data-day="wed"]::after { content: "Wed"; }
+                .day[data-day="thu"]::after { content: "Thu"; }
+                .day[data-day="fri"]::after { content: "Fri"; }
+                .day[data-day="sat"]::after { content: "Sat"; }
+                .day[data-day="sun"]::after { content: "Sun"; }
+                
+                .day {
+                    font-size: 11px;
+                    padding: 8px 2px;
+                }
+                
+                .day span {
+                    display: none; /* Hide the original text */
+                }
+            }
         }
-    }
-}
-
-
-
-
-
-
-
-
-
-
 
         .day.active {
             background: #6a11cb;
@@ -511,71 +490,10 @@
     </style>
 </head>
 <body>
-
-
-
-
-
-
-// Add this to your existing JavaScript
-function getUserLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                // Using OpenStreetMap Nominatim (free, no API key needed)
-                try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                    const data = await response.json();
-                    
-                    if (data.address) {
-                        const street = data.address.road || '';
-                        const suburb = data.address.suburb || '';
-                        const city = data.address.city || data.address.town || '';
-                        
-                        let locationText = 'Singapore';
-                        if (street) locationText = `${street}, ${city}`;
-                        
-                        document.getElementById('user-location').textContent = locationText;
-                    }
-                } catch (error) {
-                    console.log("Couldn't get street name, using city only");
-                }
-            },
-            (error) => {
-                console.log("Location access denied or unavailable");
-                document.getElementById('user-location').textContent = 'Singapore';
-            }
-        );
-    }
-}
-
-// Update your location banner HTML:
-// Change from: <div><i class="fas fa-map-marker-alt"></i> Location: Singapore</div>
-// To: <div><i class="fas fa-map-marker-alt"></i> Location: <span id="user-location">Detecting...</span></div>
-
-
-
-
-
-
-
     <!-- Location and Time Banner -->
     <div class="location-banner">
         <div class="location-info">
-
-
-
-
-
             <div><i class="fas fa-map-marker-alt"></i> Location: <span id="user-location">Detecting...</span></div>
-
-
-
-
-
             <div><i class="fas fa-clock"></i> Current Time: <span id="current-time">Loading...</span></div>
         </div>
         <div id="user-status">Not logged in</div>
@@ -635,29 +553,15 @@ function getUserLocation() {
         <!-- View Schedule Tab -->
         <div class="content active" id="view">
             <h2>Weekly Schedule</h2>
-
-
-
-
-
-
-
-<div class="week-days">
-    <div class="day active" data-day="mon"><span>Monday</span></div>
-    <div class="day" data-day="tue"><span>Tuesday</span></div>
-    <div class="day" data-day="wed"><span>Wednesday</span></div>
-    <div class="day" data-day="thu"><span>Thursday</span></div>
-    <div class="day" data-day="fri"><span>Friday</span></div>
-    <div class="day" data-day="sat"><span>Saturday</span></div>
-    <div class="day" data-day="sun"><span>Sunday</span></div>
-</div>
-
-
-
-
-
-
-
+            <div class="week-days">
+                <div class="day active" data-day="mon"><span>Monday</span></div>
+                <div class="day" data-day="tue"><span>Tuesday</span></div>
+                <div class="day" data-day="wed"><span>Wednesday</span></div>
+                <div class="day" data-day="thu"><span>Thursday</span></div>
+                <div class="day" data-day="fri"><span>Friday</span></div>
+                <div class="day" data-day="sat"><span>Saturday</span></div>
+                <div class="day" data-day="sun"><span>Sunday</span></div>
+            </div>
             
             <div class="events-container">
                 <h3>Schedule for <span id="current-day">Monday</span></h3>
@@ -768,371 +672,336 @@ function getUserLocation() {
         </div>
     </div>
 
+    <script>
+        // === SUPABASE CONFIGURATION ===
+        // Replace with your actual Supabase credentials
+        const SUPABASE_URL = 'https://hbmttwxsgpgrfrcijagt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibXR0d3hzZ3BncmZyY2lqYWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTEyMjcsImV4cCI6MjA3OTc4NzIyN30.LeownHuFwZmFOx7XOBFZYh2VZ9qy9H4fThuuR4WF1I0';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<script>
-    // === SUPABASE CONFIGURATION ===
-    // Replace with your actual Supabase credentials
-    const SUPABASE_URL = 'https://hbmttwxsgpgrfrcijagt.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibXR0d3hzZ3BncmZyY2lqYWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTEyMjcsImV4cCI6MjA3OTc4NzIyN30.LeownHuFwZmFOx7XOBFZYh2VZ9qy9H4fThuuR4WF1I0';
-    
-    // Initialize Supabase client
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // === CALENDAR DATA ===
+        let programmes = {
+            mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
+        };
+        let events = [];
+        let currentUser = null;
+        let activityLog = [];
+        let selectedDays = [];
 
-    // === CALENDAR DATA ===
-    let programmes = {
-        mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
-    };
-    let events = [];
-    let currentUser = null;
-    let activityLog = [];
-    let selectedDays = [];
-
-    // === LOCATION DETECTION ===
-    function getUserLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    // Using OpenStreetMap Nominatim (free, no API key needed)
-                    try {
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                        const data = await response.json();
+        // === LOCATION DETECTION ===
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
                         
-                        if (data.address) {
-                            const street = data.address.road || '';
-                            const suburb = data.address.suburb || '';
-                            const city = data.address.city || data.address.town || '';
+                        // Using OpenStreetMap Nominatim (free, no API key needed)
+                        try {
+                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                            const data = await response.json();
                             
-                            let locationText = 'Singapore';
-                            if (street) locationText = `${street}, ${city}`;
-                            
-                            document.getElementById('user-location').textContent = locationText;
+                            if (data.address) {
+                                const street = data.address.road || '';
+                                const suburb = data.address.suburb || '';
+                                const city = data.address.city || data.address.town || '';
+                                
+                                let locationText = 'Singapore';
+                                if (street) locationText = `${street}, ${city}`;
+                                
+                                document.getElementById('user-location').textContent = locationText;
+                            }
+                        } catch (error) {
+                            console.log("Couldn't get street name, using city only");
+                            document.getElementById('user-location').textContent = 'Singapore';
                         }
-                    } catch (error) {
-                        console.log("Couldn't get street name, using city only");
+                    },
+                    (error) => {
+                        console.log("Location access denied or unavailable");
                         document.getElementById('user-location').textContent = 'Singapore';
                     }
-                },
-                (error) => {
-                    console.log("Location access denied or unavailable");
-                    document.getElementById('user-location').textContent = 'Singapore';
-                }
-            );
-        } else {
-            document.getElementById('user-location').textContent = 'Singapore';
+                );
+            } else {
+                document.getElementById('user-location').textContent = 'Singapore';
+            }
         }
-    }
 
-    // === SUPABASE DATA FUNCTIONS ===
-    async function loadDataFromSupabase() {
-        console.log("Loading data from Supabase...");
-        showSyncStatus("Loading data from Supabase...", "info");
-        
-        try {
-            // Load programmes
-            const { data: programmesData, error: programmesError } = await supabase
-                .from('programmes')
-                .select('*');
+        // === SUPABASE DATA FUNCTIONS ===
+        async function loadDataFromSupabase() {
+            console.log("Loading data from Supabase...");
+            showSyncStatus("Loading data from Supabase...", "info");
             
-            if (programmesError) throw programmesError;
+            try {
+                // Load programmes
+                const { data: programmesData, error: programmesError } = await supabase
+                    .from('programmes')
+                    .select('*');
+                
+                if (programmesError) throw programmesError;
+                
+                // Load events
+                const { data: eventsData, error: eventsError } = await supabase
+                    .from('events')
+                    .select('*');
+                
+                if (eventsError) throw eventsError;
+                
+                // Reset programmes object
+                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                
+                // Process programmes data
+                if (programmesData) {
+                    programmesData.forEach(programme => {
+                        if (programme.days) {
+                            programme.days.forEach(day => {
+                                if (programmes[day]) {
+                                    programmes[day].push({
+                                        id: programme.id,
+                                        title: programme.title,
+                                        description: programme.description,
+                                        startTime: programme.start_time,
+                                        endTime: programme.end_time,
+                                        days: programme.days,
+                                        created_at: programme.created_at
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // Process events data
+                if (eventsData) {
+                    events = eventsData.map(event => ({
+                        id: event.id,
+                        title: event.title,
+                        description: event.description,
+                        startDate: event.start_date,
+                        endDate: event.end_date,
+                        startTime: event.start_time,
+                        endTime: event.end_time,
+                        created_at: event.created_at
+                    }));
+                }
+                
+                console.log("Data loaded from Supabase:", { programmes, events });
+                showSyncStatus("Data loaded successfully from Supabase!", "success");
+                logActivity('Data loaded from Supabase');
+                return true;
+                
+            } catch (error) {
+                console.error("Error loading from Supabase:", error);
+                showSyncStatus("Error loading data from Supabase", "error");
+                logActivity('Error loading data from Supabase');
+                return false;
+            }
+        }
+
+        async function saveProgrammeToSupabase(programmeData) {
+            try {
+                const { data, error } = await supabase
+                    .from('programmes')
+                    .insert([{
+                        title: programmeData.title,
+                        description: programmeData.description,
+                        start_time: programmeData.startTime,
+                        end_time: programmeData.endTime,
+                        days: programmeData.days
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                return data ? data[0] : null;
+            } catch (error) {
+                console.error("Error saving programme to Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function saveEventToSupabase(eventData) {
+            try {
+                const { data, error } = await supabase
+                    .from('events')
+                    .insert([{
+                        title: eventData.title,
+                        description: eventData.description,
+                        start_date: eventData.startDate,
+                        end_date: eventData.endDate,
+                        start_time: eventData.startTime,
+                        end_time: eventData.endTime
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                return data ? data[0] : null;
+            } catch (error) {
+                console.error("Error saving event to Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function deleteProgrammeFromSupabase(programmeId) {
+            try {
+                const { error } = await supabase
+                    .from('programmes')
+                    .delete()
+                    .eq('id', programmeId);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error("Error deleting programme from Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function deleteEventFromSupabase(eventId) {
+            try {
+                const { error } = await supabase
+                    .from('events')
+                    .delete()
+                    .eq('id', eventId);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error("Error deleting event from Supabase:", error);
+                throw error;
+            }
+        }
+
+        // === DATA MANAGEMENT ===
+        function showSyncStatus(message, type) {
+            const statusElement = document.getElementById('sync-status');
+            statusElement.textContent = message;
+            statusElement.className = 'sync-status';
             
-            // Load events
-            const { data: eventsData, error: eventsError } = await supabase
-                .from('events')
-                .select('*');
+            if (type === 'success') {
+                statusElement.classList.add('sync-success');
+            } else if (type === 'error') {
+                statusElement.classList.add('sync-error');
+            }
             
-            if (eventsError) throw eventsError;
+            statusElement.style.display = 'block';
             
-            // Reset programmes object
-            programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-            
-            // Process programmes data
-            if (programmesData) {
-                programmesData.forEach(programme => {
-                    if (programme.days) {
-                        programme.days.forEach(day => {
-                            if (programmes[day]) {
-                                programmes[day].push({
-                                    id: programme.id,
-                                    title: programme.title,
-                                    description: programme.description,
-                                    startTime: programme.start_time,
-                                    endTime: programme.end_time,
-                                    days: programme.days,
-                                    created_at: programme.created_at
-                                });
-                            }
-                        });
-                    }
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // === AUTHENTICATION ===
+        function checkLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('login-error');
+
+            console.log("Login attempt:", username, password);
+
+            if ((username === 'admin' && password === '456') || 
+                (username === 'ops' && password === '123')) {
+                currentUser = username;
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('logged-in-user').textContent = username;
+                document.getElementById('user-status').innerHTML = `<i class="fas fa-user"></i> Logged in as: ${username}`;
+                logActivity(`Logged in as ${username}`);
+                initializeCalendar();
+            } else {
+                errorElement.style.display = 'block';
+                console.log("Login failed");
+            }
+        }
+
+        function logout() {
+            logActivity('Logged out');
+            currentUser = null;
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('user-status').textContent = 'Not logged in';
+        }
+
+        // === ACTIVITY LOG ===
+        function logActivity(message) {
+            const timestamp = new Date().toLocaleString('en-SG');
+            const logEntry = {
+                timestamp,
+                user: currentUser,
+                message
+            };
+            activityLog.unshift(logEntry);
+            updateLogDisplay();
+        }
+
+        function updateLogDisplay() {
+            const logEntries = document.getElementById('log-entries');
+            if (logEntries) {
+                logEntries.innerHTML = '';
+                activityLog.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    div.innerHTML = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
+                    logEntries.appendChild(div);
                 });
             }
-            
-            // Process events data
-            if (eventsData) {
-                events = eventsData.map(event => ({
-                    id: event.id,
-                    title: event.title,
-                    description: event.description,
-                    startDate: event.start_date,
-                    endDate: event.end_date,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    created_at: event.created_at
-                }));
-            }
-            
-            console.log("Data loaded from Supabase:", { programmes, events });
-            showSyncStatus("Data loaded successfully from Supabase!", "success");
-            logActivity('Data loaded from Supabase');
-            return true;
-            
-        } catch (error) {
-            console.error("Error loading from Supabase:", error);
-            showSyncStatus("Error loading data from Supabase", "error");
-            logActivity('Error loading data from Supabase');
-            return false;
         }
-    }
 
-    async function saveProgrammeToSupabase(programmeData) {
-        try {
-            const { data, error } = await supabase
-                .from('programmes')
-                .insert([{
-                    title: programmeData.title,
-                    description: programmeData.description,
-                    start_time: programmeData.startTime,
-                    end_time: programmeData.endTime,
-                    days: programmeData.days
-                }])
-                .select();
-            
-            if (error) throw error;
-            return data ? data[0] : null;
-        } catch (error) {
-            console.error("Error saving programme to Supabase:", error);
-            throw error;
+        function viewActivityLog() {
+            const logContainer = document.getElementById('activity-log');
+            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
+            updateLogDisplay();
         }
-    }
 
-    async function saveEventToSupabase(eventData) {
-        try {
-            const { data, error } = await supabase
-                .from('events')
-                .insert([{
-                    title: eventData.title,
-                    description: eventData.description,
-                    start_date: eventData.startDate,
-                    end_date: eventData.endDate,
-                    start_time: eventData.startTime,
-                    end_time: eventData.endTime
-                }])
-                .select();
-            
-            if (error) throw error;
-            return data ? data[0] : null;
-        } catch (error) {
-            console.error("Error saving event to Supabase:", error);
-            throw error;
-        }
-    }
-
-    async function deleteProgrammeFromSupabase(programmeId) {
-        try {
-            const { error } = await supabase
-                .from('programmes')
-                .delete()
-                .eq('id', programmeId);
-            
-            if (error) throw error;
-            return true;
-        } catch (error) {
-            console.error("Error deleting programme from Supabase:", error);
-            throw error;
-        }
-    }
-
-    async function deleteEventFromSupabase(eventId) {
-        try {
-            const { error } = await supabase
-                .from('events')
-                .delete()
-                .eq('id', eventId);
-            
-            if (error) throw error;
-            return true;
-        } catch (error) {
-            console.error("Error deleting event from Supabase:", error);
-            throw error;
-        }
-    }
-
-    // === DATA MANAGEMENT ===
-    function showSyncStatus(message, type) {
-        const statusElement = document.getElementById('sync-status');
-        statusElement.textContent = message;
-        statusElement.className = 'sync-status';
-        
-        if (type === 'success') {
-            statusElement.classList.add('sync-success');
-        } else if (type === 'error') {
-            statusElement.classList.add('sync-error');
-        }
-        
-        statusElement.style.display = 'block';
-        
-        setTimeout(() => {
-            statusElement.style.display = 'none';
-        }, 5000);
-    }
-
-    // === AUTHENTICATION ===
-    function checkLogin() {
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const errorElement = document.getElementById('login-error');
-
-        console.log("Login attempt:", username, password);
-
-        if ((username === 'admin' && password === '456') || 
-            (username === 'ops' && password === '123')) {
-            currentUser = username;
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            document.getElementById('logged-in-user').textContent = username;
-            document.getElementById('user-status').innerHTML = `<i class="fas fa-user"></i> Logged in as: ${username}`;
-            logActivity(`Logged in as ${username}`);
-            initializeCalendar();
-        } else {
-            errorElement.style.display = 'block';
-            console.log("Login failed");
-        }
-    }
-
-    function logout() {
-        logActivity('Logged out');
-        currentUser = null;
-        document.getElementById('login-modal').style.display = 'flex';
-        document.getElementById('main-content').style.display = 'none';
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
-        document.getElementById('login-error').style.display = 'none';
-        document.getElementById('user-status').textContent = 'Not logged in';
-    }
-
-    // === ACTIVITY LOG ===
-    function logActivity(message) {
-        const timestamp = new Date().toLocaleString('en-SG');
-        const logEntry = {
-            timestamp,
-            user: currentUser,
-            message
-        };
-        activityLog.unshift(logEntry);
-        updateLogDisplay();
-    }
-
-    function updateLogDisplay() {
-        const logEntries = document.getElementById('log-entries');
-        if (logEntries) {
-            logEntries.innerHTML = '';
-            activityLog.forEach(entry => {
-                const div = document.createElement('div');
-                div.className = 'log-entry';
-                div.innerHTML = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
-                logEntries.appendChild(div);
-            });
-        }
-    }
-
-    function viewActivityLog() {
-        const logContainer = document.getElementById('activity-log');
-        logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
-        updateLogDisplay();
-    }
-
-    // === DAY SELECTION ===
-    function setupDaySelection() {
-        document.querySelectorAll('.day-option').forEach(option => {
-            option.addEventListener('click', function() {
-                const day = this.getAttribute('data-day');
-                
-                if (this.classList.contains('daily')) {
-                    selectedDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-                    document.querySelectorAll('.day-option').forEach(opt => {
-                        opt.classList.add('selected');
-                    });
-                } else {
-                    if (selectedDays.includes(day)) {
-                        selectedDays = selectedDays.filter(d => d !== day);
-                        this.classList.remove('selected');
-                    } else {
-                        selectedDays.push(day);
-                        this.classList.add('selected');
-                    }
+        // === DAY SELECTION ===
+        function setupDaySelection() {
+            document.querySelectorAll('.day-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const day = this.getAttribute('data-day');
                     
-                    const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-                    const dailyOption = document.querySelector('.day-option.daily');
-                    if (allDays.every(day => selectedDays.includes(day))) {
-                        dailyOption.classList.add('selected');
+                    if (this.classList.contains('daily')) {
+                        selectedDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                        document.querySelectorAll('.day-option').forEach(opt => {
+                            opt.classList.add('selected');
+                        });
                     } else {
-                        dailyOption.classList.remove('selected');
+                        if (selectedDays.includes(day)) {
+                            selectedDays = selectedDays.filter(d => d !== day);
+                            this.classList.remove('selected');
+                        } else {
+                            selectedDays.push(day);
+                            this.classList.add('selected');
+                        }
+                        
+                        const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                        const dailyOption = document.querySelector('.day-option.daily');
+                        if (allDays.every(day => selectedDays.includes(day))) {
+                            dailyOption.classList.add('selected');
+                        } else {
+                            dailyOption.classList.remove('selected');
+                        }
                     }
-                }
+                });
             });
-        });
-    }
-
-    // === DISPLAY FUNCTIONS ===
-    function displaySchedule(day = 'mon') {
-        const programmesList = document.getElementById('programmes-list');
-        programmesList.innerHTML = '';
-
-        if (programmes[day] && programmes[day].length > 0) {
-            programmes[day].forEach((programme, index) => {
-                const card = document.createElement('div');
-                card.className = 'event-card';
-                card.innerHTML = `
-                    <div style="font-weight: bold; font-size: 18px;">${programme.title}</div>
-                    <div style="color: #6a11cb; margin: 5px 0;">${programme.startTime} - ${programme.endTime}</div>
-                    <div>${programme.description}</div>
-                    ${currentUser === 'admin' ? `
-                    <div class="event-actions">
-                        <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteProgramme('${day}', ${index})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                    ` : ''}
-                `;
-                programmesList.appendChild(card);
-            });
-        } else {
-            programmesList.innerHTML = '<div class="no-events">No programmes scheduled</div>';
         }
-    }
 
-    function displayManageList() {
-        const manageList = document.getElementById('manage-list');
-        manageList.innerHTML = '';
+        // === DISPLAY FUNCTIONS ===
+        function displaySchedule(day = 'mon') {
+            const programmesList = document.getElementById('programmes-list');
+            programmesList.innerHTML = '';
 
-        let hasItems = false;
-
-        // Display programmes
-        Object.keys(programmes).forEach(day => {
-            if (programmes[day].length > 0) {
-                hasItems = true;
+            if (programmes[day] && programmes[day].length > 0) {
                 programmes[day].forEach((programme, index) => {
                     const card = document.createElement('div');
                     card.className = 'event-card';
                     card.innerHTML = `
-                        <div style="font-weight: bold;">${programme.title} (${getDayName(day)})</div>
-                        <div style="color: #6a11cb;">${programme.startTime} - ${programme.endTime}</div>
+                        <div style="font-weight: bold; font-size: 18px;">${programme.title}</div>
+                        <div style="color: #6a11cb; margin: 5px 0;">${programme.startTime} - ${programme.endTime}</div>
                         <div>${programme.description}</div>
+                        ${currentUser === 'admin' ? `
                         <div class="event-actions">
                             <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
                                 <i class="fas fa-edit"></i> Edit
@@ -1141,416 +1010,449 @@ function getUserLocation() {
                                 <i class="fas fa-trash"></i> Delete
                             </button>
                         </div>
+                        ` : ''}
+                    `;
+                    programmesList.appendChild(card);
+                });
+            } else {
+                programmesList.innerHTML = '<div class="no-events">No programmes scheduled</div>';
+            }
+        }
+
+        function displayManageList() {
+            const manageList = document.getElementById('manage-list');
+            manageList.innerHTML = '';
+
+            let hasItems = false;
+
+            // Display programmes
+            Object.keys(programmes).forEach(day => {
+                if (programmes[day].length > 0) {
+                    hasItems = true;
+                    programmes[day].forEach((programme, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'event-card';
+                        card.innerHTML = `
+                            <div style="font-weight: bold;">${programme.title} (${getDayName(day)})</div>
+                            <div style="color: #6a11cb;">${programme.startTime} - ${programme.endTime}</div>
+                            <div>${programme.description}</div>
+                            <div class="event-actions">
+                                <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteProgramme('${day}', ${index})">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        `;
+                        manageList.appendChild(card);
+                    });
+                }
+            });
+
+            // Display events
+            if (events.length > 0) {
+                hasItems = true;
+                events.forEach((event, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'event-card';
+                    const dateDisplay = event.startDate === event.endDate ? 
+                        formatDate(event.startDate) : 
+                        `${formatDate(event.startDate)} - ${formatDate(event.endDate)}`;
+                    
+                    card.innerHTML = `
+                        <div style="font-weight: bold;">${event.title} (Event)</div>
+                        <div style="color: #6a11cb;">${dateDisplay} | ${event.startTime} - ${event.endTime}</div>
+                        <div>${event.description}</div>
+                        <div class="event-actions">
+                            <button class="action-btn edit-btn" onclick="editEvent(${index})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="action-btn delete-btn" onclick="deleteEvent(${index})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
                     `;
                     manageList.appendChild(card);
                 });
             }
-        });
 
-        // Display events
-        if (events.length > 0) {
-            hasItems = true;
-            events.forEach((event, index) => {
-                const card = document.createElement('div');
-                card.className = 'event-card';
-                const dateDisplay = event.startDate === event.endDate ? 
-                    formatDate(event.startDate) : 
-                    `${formatDate(event.startDate)} - ${formatDate(event.endDate)}`;
-                
-                card.innerHTML = `
-                    <div style="font-weight: bold;">${event.title} (Event)</div>
-                    <div style="color: #6a11cb;">${dateDisplay} | ${event.startTime} - ${event.endTime}</div>
-                    <div>${event.description}</div>
-                    <div class="event-actions">
-                        <button class="action-btn edit-btn" onclick="editEvent(${index})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteEvent(${index})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                `;
-                manageList.appendChild(card);
-            });
+            if (!hasItems) {
+                manageList.innerHTML = '<div class="no-events">No programmes or events to manage</div>';
+            }
         }
 
-        if (!hasItems) {
-            manageList.innerHTML = '<div class="no-events">No programmes or events to manage</div>';
+        function getDayName(dayCode) {
+            const dayNames = {
+                'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday',
+                'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
+            };
+            return dayNames[dayCode] || dayCode;
         }
-    }
 
-    function getDayName(dayCode) {
-        const dayNames = {
-            'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday',
-            'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
-        };
-        return dayNames[dayCode] || dayCode;
-    }
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
 
-    function formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('en-US', options);
-    }
-
-    // === PROGRAMME & EVENT MANAGEMENT ===
-    async function deleteProgramme(day, index) {
-        if (confirm('Delete this programme?')) {
-            const programme = programmes[day][index];
-            const programmeTitle = programme.title;
-            
-            try {
-                await deleteProgrammeFromSupabase(programme.id);
-                programmes[day].splice(index, 1);
+        // === PROGRAMME & EVENT MANAGEMENT ===
+        async function deleteProgramme(day, index) {
+            if (confirm('Delete this programme?')) {
+                const programme = programmes[day][index];
+                const programmeTitle = programme.title;
                 
-                // Also remove from other days if it's a multi-day programme
-                if (programme.days && programme.days.length > 1) {
-                    programme.days.forEach(d => {
-                        if (d !== day) {
-                            const idx = programmes[d].findIndex(p => p.id === programme.id);
-                            if (idx !== -1) {
-                                programmes[d].splice(idx, 1);
+                try {
+                    await deleteProgrammeFromSupabase(programme.id);
+                    programmes[day].splice(index, 1);
+                    
+                    // Also remove from other days if it's a multi-day programme
+                    if (programme.days && programme.days.length > 1) {
+                        programme.days.forEach(d => {
+                            if (d !== day) {
+                                const idx = programmes[d].findIndex(p => p.id === programme.id);
+                                if (idx !== -1) {
+                                    programmes[d].splice(idx, 1);
+                                }
                             }
-                        }
-                    });
-                }
-                
-                displayManageList();
-                if (document.getElementById('view').classList.contains('active')) {
-                    displaySchedule(getCurrentDay());
-                }
-                logActivity(`Deleted programme: "${programmeTitle}"`);
-                showSyncStatus('Programme deleted successfully!', 'success');
-            } catch (error) {
-                showSyncStatus('Error deleting programme', 'error');
-                console.error('Delete error:', error);
-            }
-        }
-    }
-
-    async function deleteEvent(index) {
-        if (confirm('Delete this event?')) {
-            const event = events[index];
-            const eventTitle = event.title;
-            
-            try {
-                await deleteEventFromSupabase(event.id);
-                events.splice(index, 1);
-                displayManageList();
-                logActivity(`Deleted event: "${eventTitle}"`);
-                showSyncStatus('Event deleted successfully!', 'success');
-            } catch (error) {
-                showSyncStatus('Error deleting event', 'error');
-                console.error('Delete error:', error);
-            }
-        }
-    }
-
-    function editProgramme(day, index) {
-        if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
-            const programme = programmes[day][index];
-            document.getElementById('programme-title').value = programme.title;
-            document.getElementById('programme-description').value = programme.description;
-            document.getElementById('programme-start-time').value = programme.startTime;
-            document.getElementById('programme-end-time').value = programme.endTime;
-            
-            selectedDays = programme.days || [day];
-            document.querySelectorAll('.day-option').forEach(opt => {
-                const optDay = opt.getAttribute('data-day');
-                if (selectedDays.includes(optDay)) {
-                    opt.classList.add('selected');
-                } else {
-                    opt.classList.remove('selected');
-                }
-            });
-            
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            document.querySelector('.tab[data-tab="add-programme"]').classList.add('active');
-            document.getElementById('add-programme').classList.add('active');
-            
-            // Delete the old programme
-            deleteProgramme(day, index).then(() => {
-                logActivity(`Editing programme: "${programme.title}"`);
-            });
-        }
-    }
-
-    function editEvent(index) {
-        if (confirm('Edit this event? It will be deleted and you can re-add it with changes.')) {
-            const event = events[index];
-            document.getElementById('event-title').value = event.title;
-            document.getElementById('event-start-date').value = event.startDate;
-            document.getElementById('event-end-date').value = event.endDate;
-            document.getElementById('event-description').value = event.description;
-            document.getElementById('event-start-time').value = event.startTime;
-            document.getElementById('event-end-time').value = event.endTime;
-            
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            document.querySelector('.tab[data-tab="add-event"]').classList.add('active');
-            document.getElementById('add-event').classList.add('active');
-            
-            // Delete the old event
-            deleteEvent(index).then(() => {
-                logActivity(`Editing event: "${event.title}"`);
-            });
-        }
-    }
-
-    function getCurrentDay() {
-        const activeDay = document.querySelector('.day.active');
-        return activeDay ? activeDay.getAttribute('data-day') : 'mon';
-    }
-
-    function syncData() {
-        loadDataFromSupabase().then((success) => {
-            if (success) {
-                if (document.getElementById('view').classList.contains('active')) {
-                    displaySchedule(getCurrentDay());
-                }
-                if (document.getElementById('manage').classList.contains('active')) {
+                        });
+                    }
+                    
                     displayManageList();
+                    if (document.getElementById('view').classList.contains('active')) {
+                        displaySchedule(getCurrentDay());
+                    }
+                    logActivity(`Deleted programme: "${programmeTitle}"`);
+                    showSyncStatus('Programme deleted successfully!', 'success');
+                } catch (error) {
+                    showSyncStatus('Error deleting programme', 'error');
+                    console.error('Delete error:', error);
                 }
             }
-        });
-    }
+        }
 
-    function downloadCSV() {
-        let csvContent = "Type,Title,Description,Day,Start Date,End Date,Start Time,End Time,Days\n";
-        
-        // Export programmes
-        Object.keys(programmes).forEach(day => {
-            programmes[day].forEach(programme => {
+        async function deleteEvent(index) {
+            if (confirm('Delete this event?')) {
+                const event = events[index];
+                const eventTitle = event.title;
+                
+                try {
+                    await deleteEventFromSupabase(event.id);
+                    events.splice(index, 1);
+                    displayManageList();
+                    logActivity(`Deleted event: "${eventTitle}"`);
+                    showSyncStatus('Event deleted successfully!', 'success');
+                } catch (error) {
+                    showSyncStatus('Error deleting event', 'error');
+                    console.error('Delete error:', error);
+                }
+            }
+        }
+
+        function editProgramme(day, index) {
+            if (confirm('Edit this programme? It will be deleted and you can re-add it with changes.')) {
+                const programme = programmes[day][index];
+                document.getElementById('programme-title').value = programme.title;
+                document.getElementById('programme-description').value = programme.description;
+                document.getElementById('programme-start-time').value = programme.startTime;
+                document.getElementById('programme-end-time').value = programme.endTime;
+                
+                selectedDays = programme.days || [day];
+                document.querySelectorAll('.day-option').forEach(opt => {
+                    const optDay = opt.getAttribute('data-day');
+                    if (selectedDays.includes(optDay)) {
+                        opt.classList.add('selected');
+                    } else {
+                        opt.classList.remove('selected');
+                    }
+                });
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                document.querySelector('.tab[data-tab="add-programme"]').classList.add('active');
+                document.getElementById('add-programme').classList.add('active');
+                
+                // Delete the old programme
+                deleteProgramme(day, index).then(() => {
+                    logActivity(`Editing programme: "${programme.title}"`);
+                });
+            }
+        }
+
+        function editEvent(index) {
+            if (confirm('Edit this event? It will be deleted and you can re-add it with changes.')) {
+                const event = events[index];
+                document.getElementById('event-title').value = event.title;
+                document.getElementById('event-start-date').value = event.startDate;
+                document.getElementById('event-end-date').value = event.endDate;
+                document.getElementById('event-description').value = event.description;
+                document.getElementById('event-start-time').value = event.startTime;
+                document.getElementById('event-end-time').value = event.endTime;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                document.querySelector('.tab[data-tab="add-event"]').classList.add('active');
+                document.getElementById('add-event').classList.add('active');
+                
+                // Delete the old event
+                deleteEvent(index).then(() => {
+                    logActivity(`Editing event: "${event.title}"`);
+                });
+            }
+        }
+
+        function getCurrentDay() {
+            const activeDay = document.querySelector('.day.active');
+            return activeDay ? activeDay.getAttribute('data-day') : 'mon';
+        }
+
+        function syncData() {
+            loadDataFromSupabase().then((success) => {
+                if (success) {
+                    if (document.getElementById('view').classList.contains('active')) {
+                        displaySchedule(getCurrentDay());
+                    }
+                    if (document.getElementById('manage').classList.contains('active')) {
+                        displayManageList();
+                    }
+                }
+            });
+        }
+
+        function downloadCSV() {
+            let csvContent = "Type,Title,Description,Day,Start Date,End Date,Start Time,End Time,Days\n";
+            
+            // Export programmes
+            Object.keys(programmes).forEach(day => {
+                programmes[day].forEach(programme => {
+                    const row = [
+                        "Programme",
+                        `"${programme.title}"`,
+                        `"${programme.description}"`,
+                        day,
+                        "",
+                        "",
+                        programme.startTime,
+                        programme.endTime,
+                        programme.days ? programme.days.join(',') : day
+                    ];
+                    csvContent += row.join(',') + '\n';
+                });
+            });
+            
+            // Export events
+            events.forEach(event => {
                 const row = [
-                    "Programme",
-                    `"${programme.title}"`,
-                    `"${programme.description}"`,
-                    day,
+                    "Event",
+                    `"${event.title}"`,
+                    `"${event.description}"`,
                     "",
-                    "",
-                    programme.startTime,
-                    programme.endTime,
-                    programme.days ? programme.days.join(',') : day
+                    event.startDate,
+                    event.endDate,
+                    event.startTime,
+                    event.endTime,
+                    ""
                 ];
                 csvContent += row.join(',') + '\n';
             });
-        });
-        
-        // Export events
-        events.forEach(event => {
-            const row = [
-                "Event",
-                `"${event.title}"`,
-                `"${event.description}"`,
-                "",
-                event.startDate,
-                event.endDate,
-                event.startTime,
-                event.endTime,
-                ""
-            ];
-            csvContent += row.join(',') + '\n';
-        });
-        
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'programmes-events.csv';
-        link.click();
-        
-        logActivity('Downloaded data as CSV');
-        showSyncStatus('CSV downloaded successfully!', 'success');
-    }
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'programmes-events.csv';
+            link.click();
+            
+            logActivity('Downloaded data as CSV');
+            showSyncStatus('CSV downloaded successfully!', 'success');
+        }
 
-    function printPage() {
-        window.print();
-        logActivity('Printed calendar');
-    }
+        function printPage() {
+            window.print();
+            logActivity('Printed calendar');
+        }
 
-    // === UTILITY FUNCTIONS ===
-    function updateCurrentTime() {
-        const now = new Date();
-        const timeString = now.toLocaleString('en-SG', { 
-            timeZone: 'Asia/Singapore',
-            weekday: 'short', 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit',
-            hour12: false
-        });
-        document.getElementById('current-time').textContent = timeString;
-    }
+        // === UTILITY FUNCTIONS ===
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-SG', { 
+                timeZone: 'Asia/Singapore',
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
 
-    // === INITIALIZATION ===
-    async function initializeCalendar() {
-        await loadDataFromSupabase();
-        setupUI();
-    }
+        // === INITIALIZATION ===
+        async function initializeCalendar() {
+            await loadDataFromSupabase();
+            setupUI();
+        }
 
-    function setupUI() {
-        setupDaySelection();
-        
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.getAttribute('data-tab');
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
+        function setupUI() {
+            setupDaySelection();
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    if (tabId === 'manage') {
+                        displayManageList();
+                    } else if (tabId === 'view') {
+                        displaySchedule(getCurrentDay());
+                    }
+                });
+            });
+
+            document.querySelectorAll('.day').forEach(day => {
+                day.addEventListener('click', () => {
+                    const dayId = day.getAttribute('data-day');
+                    document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
+                    day.classList.add('active');
+                    document.getElementById('current-day').textContent = day.textContent;
+                    displaySchedule(dayId);
+                });
+            });
+
+            // Programme form submission
+            document.getElementById('programme-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (currentUser !== 'admin') {
+                    alert('Only admin can add programmes');
+                    return;
+                }
+
+                const title = document.getElementById('programme-title').value;
+                const description = document.getElementById('programme-description').value;
+                const startTime = document.getElementById('programme-start-time').value;
+                const endTime = document.getElementById('programme-end-time').value;
                 
-                if (tabId === 'manage') {
-                    displayManageList();
-                } else if (tabId === 'view') {
-                    displaySchedule(getCurrentDay());
+                const daysToAdd = selectedDays.length > 0 ? selectedDays : ['mon'];
+                
+                try {
+                    // Save to Supabase
+                    const savedProgramme = await saveProgrammeToSupabase({
+                        title,
+                        description,
+                        startTime,
+                        endTime,
+                        days: daysToAdd
+                    });
+
+                    // Add to local data
+                    daysToAdd.forEach(day => {
+                        programmes[day].push({ 
+                            id: savedProgramme.id,
+                            title, 
+                            description, 
+                            startTime, 
+                            endTime, 
+                            days: daysToAdd,
+                            created_at: savedProgramme.created_at
+                        });
+                    });
+                    
+                    this.reset();
+                    selectedDays = [];
+                    document.querySelectorAll('.day-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    logActivity(`Added programme: "${title}"`);
+                    showSyncStatus(`Programme added to ${daysToAdd.map(d => getDayName(d)).join(', ')}!`, 'success');
+                    
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule('mon');
+                } catch (error) {
+                    showSyncStatus('Error saving programme to database', 'error');
+                    console.error('Save error:', error);
                 }
             });
-        });
 
-        document.querySelectorAll('.day').forEach(day => {
-            day.addEventListener('click', () => {
-                const dayId = day.getAttribute('data-day');
-                document.querySelectorAll('.day').forEach(d => d.classList.remove('active'));
-                day.classList.add('active');
-                document.getElementById('current-day').textContent = day.textContent;
-                displaySchedule(dayId);
-            });
-        });
+            // Event form submission
+            document.getElementById('event-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (currentUser !== 'admin') {
+                    alert('Only admin can add events');
+                    return;
+                }
 
-        // Programme form submission
-        document.getElementById('programme-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (currentUser !== 'admin') {
-                alert('Only admin can add programmes');
-                return;
-            }
-
-            const title = document.getElementById('programme-title').value;
-            const description = document.getElementById('programme-description').value;
-            const startTime = document.getElementById('programme-start-time').value;
-            const endTime = document.getElementById('programme-end-time').value;
-            
-            const daysToAdd = selectedDays.length > 0 ? selectedDays : ['mon'];
-            
-            try {
-                // Save to Supabase
-                const savedProgramme = await saveProgrammeToSupabase({
-                    title,
-                    description,
-                    startTime,
-                    endTime,
-                    days: daysToAdd
-                });
-
-                // Add to local data
-                daysToAdd.forEach(day => {
-                    programmes[day].push({ 
-                        id: savedProgramme.id,
-                        title, 
-                        description, 
-                        startTime, 
-                        endTime, 
-                        days: daysToAdd,
-                        created_at: savedProgramme.created_at
+                const title = document.getElementById('event-title').value;
+                const startDate = document.getElementById('event-start-date').value;
+                const endDate = document.getElementById('event-end-date').value;
+                const description = document.getElementById('event-description').value;
+                const startTime = document.getElementById('event-start-time').value;
+                const endTime = document.getElementById('event-end-time').value;
+                
+                // Validate dates
+                if (new Date(endDate) < new Date(startDate)) {
+                    alert('End date cannot be before start date!');
+                    return;
+                }
+                
+                try {
+                    // Save to Supabase
+                    const savedEvent = await saveEventToSupabase({
+                        title,
+                        description,
+                        startDate,
+                        endDate,
+                        startTime,
+                        endTime
                     });
-                });
-                
-                this.reset();
-                selectedDays = [];
-                document.querySelectorAll('.day-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                
-                logActivity(`Added programme: "${title}"`);
-                showSyncStatus(`Programme added to ${daysToAdd.map(d => getDayName(d)).join(', ')}!`, 'success');
-                
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-                document.querySelector('.tab[data-tab="view"]').classList.add('active');
-                document.getElementById('view').classList.add('active');
-                displaySchedule('mon');
-            } catch (error) {
-                showSyncStatus('Error saving programme to database', 'error');
-                console.error('Save error:', error);
-            }
-        });
+                    
+                    // Add to local data
+                    events.push({
+                        id: savedEvent.id,
+                        title,
+                        description,
+                        startDate,
+                        endDate,
+                        startTime,
+                        endTime,
+                        created_at: savedEvent.created_at
+                    });
+                    
+                    this.reset();
+                    logActivity(`Added event: "${title}"`);
+                    showSyncStatus('Event added successfully!', 'success');
+                    
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule(getCurrentDay());
+                } catch (error) {
+                    showSyncStatus('Error saving event to database', 'error');
+                    console.error('Save error:', error);
+                }
+            });
 
-        // Event form submission
-        document.getElementById('event-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (currentUser !== 'admin') {
-                alert('Only admin can add events');
-                return;
-            }
+            // Set min date for event forms
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('event-start-date').min = today;
+            document.getElementById('event-end-date').min = today;
 
-            const title = document.getElementById('event-title').value;
-            const startDate = document.getElementById('event-start-date').value;
-            const endDate = document.getElementById('event-end-date').value;
-            const description = document.getElementById('event-description').value;
-            const startTime = document.getElementById('event-start-time').value;
-            const endTime = document.getElementById('event-end-time').value;
-            
-            // Validate dates
-            if (new Date(endDate) < new Date(startDate)) {
-                alert('End date cannot be before start date!');
-                return;
-            }
-            
-            try {
-                // Save to Supabase
-                const savedEvent = await saveEventToSupabase({
-                    title,
-                    description,
-                    startDate,
-                    endDate,
-                    startTime,
-                    endTime
-                });
-                
-                // Add to local data
-                events.push({
-                    id: savedEvent.id,
-                    title,
-                    description,
-                    startDate,
-                    endDate,
-                    startTime,
-                    endTime,
-                    created_at: savedEvent.created_at
-                });
-                
-                this.reset();
-                logActivity(`Added event: "${title}"`);
-                showSyncStatus('Event added successfully!', 'success');
-                
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-                document.querySelector('.tab[data-tab="view"]').classList.add('active');
-                document.getElementById('view').classList.add('active');
-                displaySchedule(getCurrentDay());
-            } catch (error) {
-                showSyncStatus('Error saving event to database', 'error');
-                console.error('Save error:', error);
-            }
-        });
+            displaySchedule('mon');
+        }
 
-        // Set min date for event forms
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('event-start-date').min = today;
-        document.getElementById('event-end-date').min = today;
+        // Start time updates and location detection
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        getUserLocation(); // Call this to start location detection
 
-        displaySchedule('mon');
-    }
-
-    // Start time updates and location detection
-    updateCurrentTime();
-    setInterval(updateCurrentTime, 1000);
-    getUserLocation(); // Call this to start location detection
-
-    console.log("Calendar system ready - awaiting login");
-</script>
-
+        console.log("Calendar system ready - awaiting login");
+    </script>
 </body>
 </html>
