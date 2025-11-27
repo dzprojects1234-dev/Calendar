@@ -484,9 +484,97 @@
                 gap: 5px;
             }
         }
+
+.welcome-page {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.welcome-header {
+    margin-bottom: 30px;
+}
+
+.welcome-message {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 10px;
+    margin: 25px 0;
+    border-left: 4px solid #6a11cb;
+    text-align: left;
+}
+
+.welcome-message p {
+    margin: 12px 0;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.respect-message {
+    background: #fff3cd;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 4px solid #ffc107;
+}
+
+.respect-message p {
+    margin: 10px 0;
+}
+
+.footer-note {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    color: #666;
+}
+
+
+
+
     </style>
 </head>
 <body>
+
+<div class="welcome-page" id="welcome-page">
+    <div class="welcome-header">
+        <i class="fas fa-hands-helping" style="font-size: 48px; color: #6a11cb; margin-bottom: 20px;"></i>
+        <h2>Welcome to Al-Iman Noja Operations System</h2>
+    </div>
+    
+    <div class="welcome-message">
+        <p><strong>🏢 Internal System - Developed with Pride</strong></p>
+        <p>✨ <strong>Built by our Al-Iman Noja Ops Team, For Our Community</strong></p>
+        <p>This system was designed, developed and maintained by the <strong>Al-Iman Noja Operations Team</strong> - 
+           the dedicated Al-Iman Mosque cleaners and facility maintenance staff who work tirelessly behind the scenes.</p>
+        
+        <div class="respect-message">
+            <p>💝 <strong>Every Job Deserves Respect</strong></p>
+            <p>We may work in sanitation, but we have dignity, skills, and the same desire to learn and grow as anyone else.</p>
+            <p><em>"No job is too small when done with big heart and clean intentions."</em></p>
+        </div>
+        
+        <p>🛠️ <strong>Built with modern technology and AI assistance</strong> - proving that learning has no boundaries</p>
+        <p>📞 For system support: <strong>Al-Iman Noja Ops Team</strong></p>
+        <p>🔒 All activities are logged for accountability and continuous improvement</p>
+    </div>
+    
+    <button class="action-btn-large" onclick="hideWelcomePage()" style="background: #6a11cb;">
+        <i class="fas fa-broom"></i> Continue to Operations Calendar
+    </button>
+    
+    <div class="footer-note">
+        <small>Proudly maintained by those who keep your spaces clean and functional</small>
+    </div>
+</div>
+
+
+
+
     <!-- Location and Time Banner -->
     <div class="location-banner">
         <div class="location-info">
