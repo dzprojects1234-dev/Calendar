@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Programmes & Events Calendar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Include Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -219,13 +218,12 @@
             transition: all 0.3s;
             font-weight: 600;
             font-size: 14px;
-            min-width: 0; /* Important for text overflow */
+            min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        /* For mobile devices */
         @media (max-width: 768px) {
             .week-days {
                 grid-template-columns: repeat(7, minmax(60px, 1fr));
@@ -237,7 +235,6 @@
                 font-size: 12px;
             }
             
-            /* Shorter day names for very small screens */
             @media (max-width: 480px) {
                 .day[data-day="mon"]::after { content: "Mon"; }
                 .day[data-day="tue"]::after { content: "Tue"; }
@@ -253,7 +250,7 @@
                 }
                 
                 .day span {
-                    display: none; /* Hide the original text */
+                    display: none;
                 }
             }
         }
@@ -523,10 +520,6 @@
         <!-- Sync Status -->
         <div class="sync-status" id="sync-status" style="display: none;"></div>
 
-
-
-
-
         <!-- Action Buttons -->
         <div class="action-buttons">
             <button class="action-btn-large" onclick="printPage()">
@@ -541,16 +534,12 @@
             <button class="action-btn-large" onclick="viewActivityLog()">
                 <i class="fas fa-history"></i> View Logs
             </button>
+            <button class="action-btn-large" onclick="clearAllLogs()" style="background: #ff9800;">
+                <i class="fas fa-trash-alt"></i> Clear Logs
+            </button>
             <button class="action-btn-large" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </button>
-<button class="action-btn-large" onclick="clearAllLogs()" style="background: #ff9800;">
-    <i class="fas fa-trash-alt"></i> Clear Logs
-</button>
-
-
-
-
         </div>
         
         <!-- Tabs -->
@@ -685,7 +674,6 @@
 
     <script>
         // === SUPABASE CONFIGURATION ===
-        // Replace with your actual Supabase credentials
         const SUPABASE_URL = 'https://hbmttwxsgpgrfrcijagt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibXR0d3hzZ3BncmZyY2lqYWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTEyMjcsImV4cCI6MjA3OTc4NzIyN30.LeownHuFwZmFOx7XOBFZYh2VZ9qy9H4fThuuR4WF1I0';
         
@@ -709,14 +697,12 @@
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         
-                        // Using OpenStreetMap Nominatim (free, no API key needed)
                         try {
                             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
                             const data = await response.json();
                             
                             if (data.address) {
                                 const street = data.address.road || '';
-                                const suburb = data.address.suburb || '';
                                 const city = data.address.city || data.address.town || '';
                                 
                                 let locationText = 'Singapore';
@@ -883,37 +869,30 @@
             }
         }
 
-
-async function clearAllLogs() {
-    if (confirm('Clear all activity logs? This cannot be undone!') && currentUser === 'Admin') {
-        try {
-            // Clear from Supabase
-            const { error } = await supabase
-                .from('activity_logs')
-                .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000');
-            
-            if (error) throw error;
-            
-            // Clear local logs
-            activityLog = [];
-            localStorage.removeItem('activityLogs');
-            updateLogDisplay();
-            
-            showSyncStatus('All logs cleared successfully!', 'success');
-            logActivity('Cleared all activity logs');
-        } catch (error) {
-            showSyncStatus('Error clearing logs', 'error');
-            console.error('Clear logs error:', error);
+        async function clearAllLogs() {
+            if (confirm('Clear all activity logs? This cannot be undone!') && currentUser === 'Admin') {
+                try {
+                    // Clear from Supabase
+                    const { error } = await supabase
+                        .from('activity_logs')
+                        .delete()
+                        .neq('id', '00000000-0000-0000-0000-000000000000');
+                    
+                    if (error) throw error;
+                    
+                    // Clear local logs
+                    activityLog = [];
+                    localStorage.removeItem('activityLogs');
+                    updateLogDisplay();
+                    
+                    showSyncStatus('All logs cleared successfully!', 'success');
+                    logActivity('Cleared all activity logs');
+                } catch (error) {
+                    showSyncStatus('Error clearing logs', 'error');
+                    console.error('Clear logs error:', error);
+                }
+            }
         }
-    }
-}
-
-
-
-
-
-
 
         // === DATA MANAGEMENT ===
         function showSyncStatus(message, type) {
@@ -940,8 +919,6 @@ async function clearAllLogs() {
             const password = document.getElementById('password').value;
             const errorElement = document.getElementById('login-error');
 
-            console.log("Login attempt:", username, password);
-
             if ((username === 'Admin' && password === '456') || 
                 (username === 'Ops' && password === '123')) {
                 currentUser = username;
@@ -953,7 +930,6 @@ async function clearAllLogs() {
                 initializeCalendar();
             } else {
                 errorElement.style.display = 'block';
-                console.log("Login failed");
             }
         }
 
@@ -968,236 +944,212 @@ async function clearAllLogs() {
             document.getElementById('user-status').textContent = 'Not logged in';
         }
 
-
-
-
-
-
-// === ENHANCED ACTIVITY LOG WITH SUPABASE ===
-async function logActivity(message) {
-    const timestamp = new Date().toLocaleString('en-SG');
-    const userAgent = navigator.userAgent;
-    const location = document.getElementById('user-location').textContent;
-    
-    // Get device type from user agent
-    const deviceType = getDeviceType(userAgent);
-    const screenResolution = `${screen.width}x${screen.height}`;
-    const browserInfo = getBrowserInfo(userAgent);
-    
-    // Create log entry object
-    const logEntry = {
-        timestamp,
-        user: currentUser,
-        message,
-        location,
-        deviceType,
-        screenResolution,
-        browserInfo,
-        userAgent: userAgent
-    };
-    
-    // Add to local activity log
-    activityLog.unshift(logEntry);
-    
-    // Try to save to Supabase
-    try {
-        await saveLogToSupabase(logEntry);
-        console.log("Activity log saved to Supabase");
-    } catch (error) {
-        console.log("Failed to save to Supabase, using local storage only:", error);
-        // Fallback to local storage
-        saveLogsToLocalStorage();
-    }
-    
-    // Try to get IP address
-    try {
-        const ipInfo = await getIPInfo();
-        logEntry.ipAddress = ipInfo.ip;
-        logEntry.country = ipInfo.country;
-        
-        // Update Supabase with IP info if available
-        if (logEntry.id) {
-            await updateLogWithIPInfo(logEntry.id, ipInfo);
-        }
-    } catch (error) {
-        console.log("Could not get IP information");
-    }
-    
-    updateLogDisplay();
-}
-
-// Save log to Supabase
-async function saveLogToSupabase(logEntry) {
-    const { data, error } = await supabase
-        .from('activity_logs')
-        .insert([{
-            username: logEntry.user,
-            action: logEntry.message,
-            location: logEntry.location,
-            device_type: logEntry.deviceType,
-            screen_resolution: logEntry.screenResolution,
-            browser: logEntry.browserInfo,
-            user_agent: logEntry.userAgent
-        }])
-        .select();
-    
-    if (error) throw error;
-    
-    // Store the Supabase ID for later updates
-    if (data && data[0]) {
-        logEntry.id = data[0].id;
-    }
-    
-    return data;
-}
-
-// Update log with IP information
-async function updateLogWithIPInfo(logId, ipInfo) {
-    const { error } = await supabase
-        .from('activity_logs')
-        .update({
-            ip_address: ipInfo.ip,
-            country: ipInfo.country
-        })
-        .eq('id', logId);
-    
-    if (error) throw error;
-}
-
-// Load historical logs from Supabase
-async function loadHistoricalLogs() {
-    try {
-        const { data, error } = await supabase
-            .from('activity_logs')
-            .select('*')
-            .order('timestamp', { ascending: false })
-            .limit(50); // Load last 50 logs
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-            // Convert Supabase data to local format
-            const historicalLogs = data.map(item => ({
-                timestamp: new Date(item.timestamp).toLocaleString('en-SG'),
-                user: item.username,
-                message: item.action,
-                location: item.location,
-                deviceType: item.device_type,
-                screenResolution: item.screen_resolution,
-                browserInfo: item.browser,
-                ipAddress: item.ip_address,
-                country: item.country,
-                userAgent: item.user_agent
-            }));
+        // === ENHANCED ACTIVITY LOG WITH SUPABASE ===
+        async function logActivity(message) {
+            const timestamp = new Date().toLocaleString('en-SG');
+            const userAgent = navigator.userAgent;
+            const location = document.getElementById('user-location').textContent;
             
-            // Merge with current session logs
-            activityLog = [...historicalLogs, ...activityLog];
-            updateLogDisplay();
-        }
-    } catch (error) {
-        console.log("Could not load historical logs:", error);
-    }
-}
-
-// Device type detection
-function getDeviceType(userAgent) {
-    if (/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
-        if (/Tablet|iPad/i.test(userAgent)) {
-            return 'Tablet';
-        }
-        return 'Mobile';
-    }
-    return 'Desktop';
-}
-
-// Browser detection
-function getBrowserInfo(userAgent) {
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
-    if (userAgent.includes('Edge')) return 'Edge';
-    if (userAgent.includes('Opera')) return 'Opera';
-    return 'Unknown Browser';
-}
-
-// IP information
-async function getIPInfo() {
-    try {
-        const response = await fetch('https://ipapi.co/json/');
-        if (!response.ok) throw new Error('IP API failed');
-        const data = await response.json();
-        return {
-            ip: data.ip,
-            country: data.country_name,
-            city: data.city,
-            isp: data.org
-        };
-    } catch (error) {
-        // Fallback service
-        try {
-            const response = await fetch('https://api.ipify.org?format=json');
-            const data = await response.json();
-            return { ip: data.ip, country: 'Unknown', city: 'Unknown', isp: 'Unknown' };
-        } catch (fallbackError) {
-            throw new Error('Could not retrieve IP information');
-        }
-    }
-}
-
-// Update log display with enhanced information
-function updateLogDisplay() {
-    const logEntries = document.getElementById('log-entries');
-    if (logEntries) {
-        logEntries.innerHTML = '';
-        activityLog.forEach(entry => {
-            const div = document.createElement('div');
-            div.className = 'log-entry';
+            const deviceType = getDeviceType(userAgent);
+            const screenResolution = `${screen.width}x${screen.height}`;
+            const browserInfo = getBrowserInfo(userAgent);
             
-            let logText = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
+            const logEntry = {
+                timestamp,
+                user: currentUser,
+                message,
+                location,
+                deviceType,
+                screenResolution,
+                browserInfo,
+                userAgent: userAgent
+            };
             
-            // Add device and location info if available
-            if (entry.deviceType || entry.location !== 'Detecting...') {
-                logText += `<br><small style="color: #666; font-size: 12px;">`;
-                logText += `📍 ${entry.location}`;
-                logText += ` | 📱 ${entry.deviceType}`;
-                logText += ` | 🖥️ ${entry.screenResolution}`;
-                logText += ` | 🌐 ${entry.browserInfo}`;
-                
-                if (entry.ipAddress) {
-                    logText += ` | 🔒 ${entry.ipAddress}`;
-                    if (entry.country && entry.country !== 'Unknown') {
-                        logText += ` (${entry.country})`;
-                    }
-                }
-                logText += `</small>`;
+            activityLog.unshift(logEntry);
+            
+            try {
+                await saveLogToSupabase(logEntry);
+                console.log("Activity log saved to Supabase");
+            } catch (error) {
+                console.log("Failed to save to Supabase, using local storage only:", error);
+                saveLogsToLocalStorage();
             }
             
-            div.innerHTML = logText;
-            logEntries.appendChild(div);
-        });
-    }
-}
-
-// Local storage fallback
-function saveLogsToLocalStorage() {
-    localStorage.setItem('activityLogs', JSON.stringify(activityLog));
-}
-
-function loadLogsFromLocalStorage() {
-    const saved = localStorage.getItem('activityLogs');
-    if (saved) {
-        try {
-            activityLog = JSON.parse(saved);
-        } catch (error) {
-            console.log("Error loading logs from local storage:", error);
+            try {
+                const ipInfo = await getIPInfo();
+                logEntry.ipAddress = ipInfo.ip;
+                logEntry.country = ipInfo.country;
+                
+                if (logEntry.id) {
+                    await updateLogWithIPInfo(logEntry.id, ipInfo);
+                }
+            } catch (error) {
+                console.log("Could not get IP information");
+            }
+            
+            updateLogDisplay();
         }
-    }
-}
 
+        async function saveLogToSupabase(logEntry) {
+            const { data, error } = await supabase
+                .from('activity_logs')
+                .insert([{
+                    username: logEntry.user,
+                    action: logEntry.message,
+                    location: logEntry.location,
+                    device_type: logEntry.deviceType,
+                    screen_resolution: logEntry.screenResolution,
+                    browser: logEntry.browserInfo,
+                    user_agent: logEntry.userAgent
+                }])
+                .select();
+            
+            if (error) throw error;
+            
+            if (data && data[0]) {
+                logEntry.id = data[0].id;
+            }
+            
+            return data;
+        }
 
+        async function updateLogWithIPInfo(logId, ipInfo) {
+            const { error } = await supabase
+                .from('activity_logs')
+                .update({
+                    ip_address: ipInfo.ip,
+                    country: ipInfo.country
+                })
+                .eq('id', logId);
+            
+            if (error) throw error;
+        }
 
+        async function loadHistoricalLogs() {
+            try {
+                const { data, error } = await supabase
+                    .from('activity_logs')
+                    .select('*')
+                    .order('timestamp', { ascending: false })
+                    .limit(50);
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    const historicalLogs = data.map(item => ({
+                        timestamp: new Date(item.timestamp).toLocaleString('en-SG'),
+                        user: item.username,
+                        message: item.action,
+                        location: item.location,
+                        deviceType: item.device_type,
+                        screenResolution: item.screen_resolution,
+                        browserInfo: item.browser,
+                        ipAddress: item.ip_address,
+                        country: item.country,
+                        userAgent: item.user_agent
+                    }));
+                    
+                    activityLog = [...historicalLogs, ...activityLog];
+                    updateLogDisplay();
+                }
+            } catch (error) {
+                console.log("Could not load historical logs:", error);
+            }
+        }
 
+        function getDeviceType(userAgent) {
+            if (/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+                if (/Tablet|iPad/i.test(userAgent)) {
+                    return 'Tablet';
+                }
+                return 'Mobile';
+            }
+            return 'Desktop';
+        }
 
+        function getBrowserInfo(userAgent) {
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            if (userAgent.includes('Opera')) return 'Opera';
+            return 'Unknown Browser';
+        }
+
+        async function getIPInfo() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                if (!response.ok) throw new Error('IP API failed');
+                const data = await response.json();
+                return {
+                    ip: data.ip,
+                    country: data.country_name,
+                    city: data.city,
+                    isp: data.org
+                };
+            } catch (error) {
+                try {
+                    const response = await fetch('https://api.ipify.org?format=json');
+                    const data = await response.json();
+                    return { ip: data.ip, country: 'Unknown', city: 'Unknown', isp: 'Unknown' };
+                } catch (fallbackError) {
+                    throw new Error('Could not retrieve IP information');
+                }
+            }
+        }
+
+        function updateLogDisplay() {
+            const logEntries = document.getElementById('log-entries');
+            if (logEntries) {
+                logEntries.innerHTML = '';
+                activityLog.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    
+                    let logText = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
+                    
+                    if (entry.deviceType || entry.location !== 'Detecting...') {
+                        logText += `<br><small style="color: #666; font-size: 12px;">`;
+                        logText += `📍 ${entry.location}`;
+                        logText += ` | 📱 ${entry.deviceType}`;
+                        logText += ` | 🖥️ ${entry.screenResolution}`;
+                        logText += ` | 🌐 ${entry.browserInfo}`;
+                        
+                        if (entry.ipAddress) {
+                            logText += ` | 🔒 ${entry.ipAddress}`;
+                            if (entry.country && entry.country !== 'Unknown') {
+                                logText += ` (${entry.country})`;
+                            }
+                        }
+                        logText += `</small>`;
+                    }
+                    
+                    div.innerHTML = logText;
+                    logEntries.appendChild(div);
+                });
+            }
+        }
+
+        function saveLogsToLocalStorage() {
+            localStorage.setItem('activityLogs', JSON.stringify(activityLog));
+        }
+
+        function loadLogsFromLocalStorage() {
+            const saved = localStorage.getItem('activityLogs');
+            if (saved) {
+                try {
+                    activityLog = JSON.parse(saved);
+                } catch (error) {
+                    console.log("Error loading logs from local storage:", error);
+                }
+            }
+        }
+
+        function viewActivityLog() {
+            const logContainer = document.getElementById('activity-log');
+            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
+            updateLogDisplay();
+        }
 
         // === DAY SELECTION ===
         function setupDaySelection() {
@@ -1268,7 +1220,6 @@ function loadLogsFromLocalStorage() {
 
             let hasItems = false;
 
-            // Display programmes
             Object.keys(programmes).forEach(day => {
                 if (programmes[day].length > 0) {
                     hasItems = true;
@@ -1293,7 +1244,6 @@ function loadLogsFromLocalStorage() {
                 }
             });
 
-            // Display events
             if (events.length > 0) {
                 hasItems = true;
                 events.forEach((event, index) => {
@@ -1348,7 +1298,6 @@ function loadLogsFromLocalStorage() {
                     await deleteProgrammeFromSupabase(programme.id);
                     programmes[day].splice(index, 1);
                     
-                    // Also remove from other days if it's a multi-day programme
                     if (programme.days && programme.days.length > 1) {
                         programme.days.forEach(d => {
                             if (d !== day) {
@@ -1414,7 +1363,6 @@ function loadLogsFromLocalStorage() {
                 document.querySelector('.tab[data-tab="add-programme"]').classList.add('active');
                 document.getElementById('add-programme').classList.add('active');
                 
-                // Delete the old programme
                 deleteProgramme(day, index).then(() => {
                     logActivity(`Editing programme: "${programme.title}"`);
                 });
@@ -1436,7 +1384,6 @@ function loadLogsFromLocalStorage() {
                 document.querySelector('.tab[data-tab="add-event"]').classList.add('active');
                 document.getElementById('add-event').classList.add('active');
                 
-                // Delete the old event
                 deleteEvent(index).then(() => {
                     logActivity(`Editing event: "${event.title}"`);
                 });
@@ -1464,7 +1411,6 @@ function loadLogsFromLocalStorage() {
         function downloadCSV() {
             let csvContent = "Type,Title,Description,Day,Start Date,End Date,Start Time,End Time,Days\n";
             
-            // Export programmes
             Object.keys(programmes).forEach(day => {
                 programmes[day].forEach(programme => {
                     const row = [
@@ -1482,7 +1428,6 @@ function loadLogsFromLocalStorage() {
                 });
             });
             
-            // Export events
             events.forEach(event => {
                 const row = [
                     "Event",
@@ -1530,21 +1475,13 @@ function loadLogsFromLocalStorage() {
             document.getElementById('current-time').textContent = timeString;
         }
 
-
-
-
-
-
         // === INITIALIZATION ===
-async function initializeCalendar() {
-    await loadDataFromSupabase();
-    await loadHistoricalLogs(); // Add this line
-    setupUI();
-}
-
-
-
-
+        async function initializeCalendar() {
+            loadLogsFromLocalStorage();
+            await loadDataFromSupabase();
+            await loadHistoricalLogs();
+            setupUI();
+        }
 
         function setupUI() {
             setupDaySelection();
@@ -1575,7 +1512,6 @@ async function initializeCalendar() {
                 });
             });
 
-            // Programme form submission
             document.getElementById('programme-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (currentUser !== 'Admin') {
@@ -1591,7 +1527,6 @@ async function initializeCalendar() {
                 const daysToAdd = selectedDays.length > 0 ? selectedDays : ['mon'];
                 
                 try {
-                    // Save to Supabase
                     const savedProgramme = await saveProgrammeToSupabase({
                         title,
                         description,
@@ -1600,7 +1535,6 @@ async function initializeCalendar() {
                         days: daysToAdd
                     });
 
-                    // Add to local data
                     daysToAdd.forEach(day => {
                         programmes[day].push({ 
                             id: savedProgramme.id,
@@ -1633,7 +1567,6 @@ async function initializeCalendar() {
                 }
             });
 
-            // Event form submission
             document.getElementById('event-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (currentUser !== 'Admin') {
@@ -1648,14 +1581,12 @@ async function initializeCalendar() {
                 const startTime = document.getElementById('event-start-time').value;
                 const endTime = document.getElementById('event-end-time').value;
                 
-                // Validate dates
                 if (new Date(endDate) < new Date(startDate)) {
                     alert('End date cannot be before start date!');
                     return;
                 }
                 
                 try {
-                    // Save to Supabase
                     const savedEvent = await saveEventToSupabase({
                         title,
                         description,
@@ -1665,7 +1596,6 @@ async function initializeCalendar() {
                         endTime
                     });
                     
-                    // Add to local data
                     events.push({
                         id: savedEvent.id,
                         title,
@@ -1692,7 +1622,6 @@ async function initializeCalendar() {
                 }
             });
 
-            // Set min date for event forms
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('event-start-date').min = today;
             document.getElementById('event-end-date').min = today;
@@ -1703,7 +1632,7 @@ async function initializeCalendar() {
         // Start time updates and location detection
         updateCurrentTime();
         setInterval(updateCurrentTime, 1000);
-        getUserLocation(); // Call this to start location detection
+        getUserLocation();
 
         console.log("Calendar system ready - awaiting login");
     </script>
