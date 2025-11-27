@@ -58,10 +58,23 @@
             margin-bottom: 20px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.1);
             display: none;
+            position: relative;
+            overflow: hidden;
         }
 
         .welcome-header {
             margin-bottom: 30px;
+            position: relative;
+        }
+
+        .welcome-header::after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            margin: 15px auto;
+            border-radius: 2px;
         }
 
         .welcome-message {
@@ -71,12 +84,44 @@
             margin: 25px 0;
             border-left: 4px solid #6a11cb;
             text-align: left;
+            position: relative;
         }
 
-        .welcome-message p {
-            margin: 12px 0;
-            font-size: 16px;
-            line-height: 1.6;
+        .typing-container {
+            min-height: 200px;
+        }
+
+        .typing-line {
+            margin-bottom: 15px;
+            min-height: 24px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 20px;
+            background-color: #6a11cb;
+            margin-left: 4px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
+        .highlight {
+            color: #6a11cb;
+            font-weight: bold;
         }
 
         .respect-message {
@@ -87,15 +132,28 @@
             border-left: 4px solid #ffc107;
         }
 
-        .respect-message p {
-            margin: 10px 0;
-        }
-
         .footer-note {
             margin-top: 20px;
             padding-top: 15px;
             border-top: 1px solid #eee;
             color: #666;
+            font-style: italic;
+        }
+
+        .countdown {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #6a11cb;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         /* ===== LOGIN MODAL ===== */
@@ -491,6 +549,14 @@
 
         /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 768px) {
+            .welcome-page {
+                padding: 20px;
+            }
+            
+            .welcome-message {
+                padding: 20px;
+            }
+            
             .action-buttons {
                 flex-direction: column;
             }
@@ -539,31 +605,17 @@
 <body>
     <!-- Welcome Page -->
     <div class="welcome-page" id="welcome-page">
+        <div class="countdown" id="countdown">5</div>
         <div class="welcome-header">
             <i class="fas fa-hands-helping" style="font-size: 48px; color: #6a11cb; margin-bottom: 20px;"></i>
             <h2>Welcome to Al-Iman Noja Operations System</h2>
         </div>
         
         <div class="welcome-message">
-            <p><strong>🏢 Internal System - Developed with Pride</strong></p>
-            <p>✨ <strong>Built by our Al-Iman Noja Ops Team, For Our Community</strong></p>
-            <p>This system was designed, developed and maintained by the <strong>Al-Iman Noja Operations Team</strong> - 
-               the dedicated Al-Iman Mosque cleaners and facility maintenance staff who work tirelessly behind the scenes.</p>
-            
-            <div class="respect-message">
-                <p>💝 <strong>Every Job Deserves Respect</strong></p>
-                <p>We may work in sanitation, but we have dignity, skills, and the same desire to learn and grow as anyone else.</p>
-                <p><em>"No job is too small when done with big heart and clean intentions."</em></p>
+            <div class="typing-container" id="typing-container">
+                <!-- Typing content will be inserted here by JavaScript -->
             </div>
-            
-            <p>🛠️ <strong>Built with modern technology and AI assistance</strong> - proving that learning has no boundaries</p>
-            <p>📞 For system support: <strong>Al-Iman Noja Ops Team</strong></p>
-            <p>🔒 All activities are logged for accountability and continuous improvement</p>
         </div>
-        
-        <button class="action-btn-large" onclick="hideWelcomePage()" style="background: #6a11cb;">
-            <i class="fas fa-broom"></i> Continue to Operations Calendar
-        </button>
         
         <div class="footer-note">
             <small>Proudly maintained by those who keep your spaces clean and functional</small>
@@ -754,6 +806,206 @@
             <div id="log-entries"></div>
         </div>
     </div>
+
+    <script>
+        // Welcome message content with formatting instructions
+        const welcomeContent = [
+            { text: "Work Order for Programmes & Events", class: "bold" },
+            { text: "For Internal Use Only", class: "italic" },
+            { text: "" }, // Empty line for spacing
+            { text: "This system was designed, developed, and maintained by the ", class: "" },
+            { text: "Al-Iman Noja Operations Team", class: "bold" },
+            { text: " — the dedicated cleaners and facility maintenance staff of Al-Iman Mosque who work tirelessly behind the scenes.", class: "" },
+            { text: "" }, // Empty line for spacing
+            { text: "Built with modern technology and AI support, it stands as proof that learning has no boundaries.", class: "" },
+            { text: "" }, // Empty line for spacing
+            { text: "All activities are logged to ensure accountability and continuous improvement.", class: "" },
+            { text: "" }, // Empty line for spacing
+            { text: "Every job deserves respect. We may work in sanitation, but we carry dignity, skill, and the same drive to learn and grow as anyone else. No task is too small when performed with sincerity and a big heart.", class: "" }
+        ];
+
+        // Function to type text with a cursor effect
+        function typeText(element, text, speed, callback) {
+            let i = 0;
+            element.innerHTML = '';
+            
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    if (callback) callback();
+                }
+            }
+            
+            type();
+        }
+
+        // Function to create typing effect for welcome message
+        function typeWelcomeMessage() {
+            const container = document.getElementById('typing-container');
+            container.innerHTML = '';
+            
+            let lineIndex = 0;
+            let totalLines = welcomeContent.length;
+            
+            function typeNextLine() {
+                if (lineIndex < totalLines) {
+                    const lineData = welcomeContent[lineIndex];
+                    
+                    // Create a new line element
+                    const lineElement = document.createElement('div');
+                    lineElement.className = `typing-line ${lineData.class}`;
+                    container.appendChild(lineElement);
+                    
+                    // If it's an empty line, just add a line break and move to next
+                    if (lineData.text === "") {
+                        lineIndex++;
+                        setTimeout(typeNextLine, 300);
+                        return;
+                    }
+                    
+                    // Type the text with cursor
+                    const textElement = document.createElement('span');
+                    lineElement.appendChild(textElement);
+                    
+                    const cursor = document.createElement('span');
+                    cursor.className = 'cursor';
+                    lineElement.appendChild(cursor);
+                    
+                    typeText(textElement, lineData.text, 30, function() {
+                        // Remove cursor after typing is done
+                        lineElement.removeChild(cursor);
+                        lineIndex++;
+                        
+                        // Add a slight delay between lines
+                        setTimeout(typeNextLine, 500);
+                    });
+                } else {
+                    // Start countdown when typing is complete
+                    startCountdown();
+                }
+            }
+            
+            typeNextLine();
+        }
+
+        // Function to start countdown and auto-close welcome message
+        function startCountdown() {
+            let countdownValue = 5;
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = countdownValue;
+            
+            const countdownInterval = setInterval(() => {
+                countdownValue--;
+                countdownElement.textContent = countdownValue;
+                
+                if (countdownValue <= 0) {
+                    clearInterval(countdownInterval);
+                    hideWelcomePage();
+                }
+            }, 1000);
+        }
+
+        // Function to show welcome page
+        function showWelcomePage() {
+            document.getElementById('welcome-page').style.display = 'block';
+            document.getElementById('main-content').style.display = 'none';
+            typeWelcomeMessage();
+        }
+
+        // Function to hide welcome page
+        function hideWelcomePage() {
+            document.getElementById('welcome-page').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+
+        // Authentication functions
+        function checkLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('login-error');
+
+            if ((username === 'Admin' && password === '456') || 
+                (username === 'Ops' && password === '123')) {
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('logged-in-user').textContent = username;
+                document.getElementById('user-status').innerHTML = `<i class="fas fa-user"></i> Logged in as: ${username}`;
+                showWelcomePage();
+            } else {
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('user-status').textContent = 'Not logged in';
+        }
+
+        // Location and time functions
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        try {
+                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                            const data = await response.json();
+                            
+                            if (data.address) {
+                                const street = data.address.road || '';
+                                const city = data.address.city || data.address.town || '';
+                                
+                                let locationText = 'Singapore';
+                                if (street) locationText = `${street}, ${city}`;
+                                
+                                document.getElementById('user-location').textContent = locationText;
+                            }
+                        } catch (error) {
+                            console.log("Couldn't get street name, using city only");
+                            document.getElementById('user-location').textContent = 'Singapore';
+                        }
+                    },
+                    (error) => {
+                        console.log("Location access denied or unavailable");
+                        document.getElementById('user-location').textContent = 'Singapore';
+                    }
+                );
+            } else {
+                document.getElementById('user-location').textContent = 'Singapore';
+            }
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-SG', { 
+                timeZone: 'Asia/Singapore',
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
+
+        // Initialize the application
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        getUserLocation();
+
+        console.log("Mosque Operations Calendar System Ready");
+    </script>
 
     <script>
         // ===== SUPABASE CONFIGURATION =====
@@ -1685,5 +1937,6 @@
 
         console.log("Mosque Operations Calendar System Ready - Supabase Integrated");
     </script>
+
 </body>
 </html>
