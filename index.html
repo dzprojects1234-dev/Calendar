@@ -202,22 +202,82 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .week-days {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
 
+
+
+
+
+
+
+
+
+
+
+.week-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+.day {
+    padding: 12px 5px;
+    text-align: center;
+    background: #f5f7ff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+    font-size: 14px;
+    min-width: 0; /* Important for text overflow */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* For mobile devices */
+@media (max-width: 768px) {
+    .week-days {
+        grid-template-columns: repeat(7, minmax(60px, 1fr));
+        gap: 5px;
+    }
+    
+    .day {
+        padding: 10px 3px;
+        font-size: 12px;
+    }
+    
+    /* Shorter day names for very small screens */
+    @media (max-width: 480px) {
+        .day[data-day="mon"]::after { content: "Mon"; }
+        .day[data-day="tue"]::after { content: "Tue"; }
+        .day[data-day="wed"]::after { content: "Wed"; }
+        .day[data-day="thu"]::after { content: "Thu"; }
+        .day[data-day="fri"]::after { content: "Fri"; }
+        .day[data-day="sat"]::after { content: "Sat"; }
+        .day[data-day="sun"]::after { content: "Sun"; }
+        
         .day {
-            padding: 15px 10px;
-            text-align: center;
-            background: #f5f7ff;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
+            font-size: 11px;
+            padding: 8px 2px;
         }
+        
+        .day span {
+            display: none; /* Hide the original text */
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
         .day.active {
             background: #6a11cb;
@@ -514,15 +574,29 @@
         <!-- View Schedule Tab -->
         <div class="content active" id="view">
             <h2>Weekly Schedule</h2>
-            <div class="week-days">
-                <div class="day active" data-day="mon">Monday</div>
-                <div class="day" data-day="tue">Tuesday</div>
-                <div class="day" data-day="wed">Wednesday</div>
-                <div class="day" data-day="thu">Thursday</div>
-                <div class="day" data-day="fri">Friday</div>
-                <div class="day" data-day="sat">Saturday</div>
-                <div class="day" data-day="sun">Sunday</div>
-            </div>
+
+
+
+
+
+
+
+<div class="week-days">
+    <div class="day active" data-day="mon"><span>Monday</span></div>
+    <div class="day" data-day="tue"><span>Tuesday</span></div>
+    <div class="day" data-day="wed"><span>Wednesday</span></div>
+    <div class="day" data-day="thu"><span>Thursday</span></div>
+    <div class="day" data-day="fri"><span>Friday</span></div>
+    <div class="day" data-day="sat"><span>Saturday</span></div>
+    <div class="day" data-day="sun"><span>Sunday</span></div>
+</div>
+
+
+
+
+
+
+
             
             <div class="events-container">
                 <h3>Schedule for <span id="current-day">Monday</span></h3>
