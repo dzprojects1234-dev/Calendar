@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Programmes & Events Calendar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Include Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -25,7 +27,7 @@
             margin: 0 auto;
         }
 
-        .singapore-time {
+        .location-banner {
             background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 10px;
@@ -34,6 +36,15 @@
             text-align: center;
             font-size: 14px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .location-info {
+            display: flex;
+            gap: 20px;
         }
 
         .login-modal {
@@ -404,30 +415,6 @@
             border: 1px solid #ffcdd2;
         }
 
-        .file-input {
-            display: none;
-        }
-
-        .file-upload-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-        }
-
-        .file-upload-btn:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-        }
-
         .date-range {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -450,14 +437,27 @@
             .date-range {
                 grid-template-columns: 1fr;
             }
+            
+            .location-banner {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .location-info {
+                flex-direction: column;
+                gap: 5px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Singapore Time Display -->
-    <div class="singapore-time">
-        <i class="fas fa-clock"></i> Singapore: 
-        <span id="singapore-time">Loading...</span>
+    <!-- Location and Time Banner -->
+    <div class="location-banner">
+        <div class="location-info">
+            <div><i class="fas fa-map-marker-alt"></i> Location: Singapore</div>
+            <div><i class="fas fa-clock"></i> Current Time: <span id="current-time">Loading...</span></div>
+        </div>
+        <div id="user-status">Not logged in</div>
     </div>
 
     <!-- Login Modal -->
@@ -489,14 +489,10 @@
             <button class="action-btn-large" onclick="printPage()">
                 <i class="fas fa-print"></i> Print
             </button>
-            <button class="action-btn-large" onclick="exportToCSV()">
-                <i class="fas fa-download"></i> Export CSV
+            <button class="action-btn-large" onclick="downloadCSV()">
+                <i class="fas fa-download"></i> Download CSV
             </button>
-            <button class="file-upload-btn" onclick="document.getElementById('csv-file').click()">
-                <i class="fas fa-upload"></i> Import CSV
-            </button>
-            <input type="file" id="csv-file" class="file-input" accept=".csv" onchange="importFromCSV(event)">
-            <button class="action-btn-large" onclick="manualSync()">
+            <button class="action-btn-large" onclick="syncData()">
                 <i class="fas fa-sync"></i> Sync Data
             </button>
             <button class="action-btn-large" onclick="viewActivityLog()">
@@ -531,7 +527,7 @@
             <div class="events-container">
                 <h3>Schedule for <span id="current-day">Monday</span></h3>
                 <div class="events-list" id="programmes-list">
-                    <div class="no-events">No programmes scheduled. Add some or import CSV data.</div>
+                    <div class="no-events">Loading programmes...</div>
                 </div>
             </div>
         </div>
@@ -626,7 +622,7 @@
         <div class="content" id="manage">
             <h2>Manage All Programmes & Events</h2>
             <div class="events-list" id="manage-list">
-                <div class="no-events">No programmes or events to manage</div>
+                <div class="no-events">Loading data...</div>
             </div>
         </div>
 
@@ -638,10 +634,13 @@
     </div>
 
     <script>
-        // === GITHUB CONFIGURATION ===
-        // REPLACE WITH YOUR ACTUAL REPOSITORY
-        const GITHUB_REPO = 'your-username/your-repo-name';
-        const DATA_FILE_PATH = 'data.json';
+        // === SUPABASE CONFIGURATION ===
+        // Replace with your actual Supabase credentials
+        const SUPABASE_URL = 'https://hbmttwxsgpgrfrcijagt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibXR0d3hzZ3BncmZyY2lqYWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTEyMjcsImV4cCI6MjA3OTc4NzIyN30.LeownHuFwZmFOx7XOBFZYh2VZ9qy9H4fThuuR4WF1I0';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // === CALENDAR DATA ===
         let programmes = {
@@ -652,91 +651,151 @@
         let activityLog = [];
         let selectedDays = [];
 
-        // === FIXED GITHUB DATA LOADING ===
-        async function loadDataFromGitHub() {
-            console.log("Loading data from GitHub...");
-            showSyncStatus("Loading data from GitHub...", "info");
+        // === SUPABASE DATA FUNCTIONS ===
+        async function loadDataFromSupabase() {
+            console.log("Loading data from Supabase...");
+            showSyncStatus("Loading data from Supabase...", "info");
             
             try {
-                const dataUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/${DATA_FILE_PATH}?t=${Date.now()}`;
+                // Load programmes
+                const { data: programmesData, error: programmesError } = await supabase
+                    .from('programmes')
+                    .select('*');
                 
-                console.log("Fetching from:", dataUrl);
-                const response = await fetch(dataUrl);
+                if (programmesError) throw programmesError;
                 
-                if (!response.ok) {
-                    // If GitHub file doesn't exist or has error, just continue with local data
-                    console.log("GitHub file not found or error, continuing with local data");
-                    showSyncStatus("No data found on GitHub - using local data", "info");
-                    return true; // Continue with local data
-                }
+                // Load events
+                const { data: eventsData, error: eventsError } = await supabase
+                    .from('events')
+                    .select('*');
                 
-                const data = await response.json();
-                console.log("Data loaded from GitHub:", data);
+                if (eventsError) throw eventsError;
                 
-                // MERGE GitHub data with local data instead of replacing
-                if (data.programmes) {
-                    Object.keys(data.programmes).forEach(day => {
-                        if (programmes[day]) {
-                            // Only add programmes that don't already exist
-                            data.programmes[day].forEach(newProgramme => {
-                                const exists = programmes[day].some(p => p.title === newProgramme.title && p.startTime === newProgramme.startTime);
-                                if (!exists) {
-                                    programmes[day].push(newProgramme);
+                // Reset programmes object
+                programmes = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
+                
+                // Process programmes data
+                if (programmesData) {
+                    programmesData.forEach(programme => {
+                        if (programme.days) {
+                            programme.days.forEach(day => {
+                                if (programmes[day]) {
+                                    programmes[day].push({
+                                        id: programme.id,
+                                        title: programme.title,
+                                        description: programme.description,
+                                        startTime: programme.start_time,
+                                        endTime: programme.end_time,
+                                        days: programme.days,
+                                        created_at: programme.created_at
+                                    });
                                 }
                             });
                         }
                     });
                 }
                 
-                if (data.events) {
-                    data.events.forEach(newEvent => {
-                        const exists = events.some(e => e.title === newEvent.title && e.startDate === newEvent.startDate);
-                        if (!exists) {
-                            events.push(newEvent);
-                        }
-                    });
+                // Process events data
+                if (eventsData) {
+                    events = eventsData.map(event => ({
+                        id: event.id,
+                        title: event.title,
+                        description: event.description,
+                        startDate: event.start_date,
+                        endDate: event.end_date,
+                        startTime: event.start_time,
+                        endTime: event.end_time,
+                        created_at: event.created_at
+                    }));
                 }
                 
-                showSyncStatus("Data synced successfully with GitHub!", "success");
-                logActivity('Data synced with GitHub');
+                console.log("Data loaded from Supabase:", { programmes, events });
+                showSyncStatus("Data loaded successfully from Supabase!", "success");
+                logActivity('Data loaded from Supabase');
                 return true;
                 
             } catch (error) {
-                console.error("Error loading from GitHub:", error);
-                showSyncStatus("Using local data (GitHub unavailable)", "info");
-                logActivity('Using local data - GitHub sync failed');
-                return true; // Continue with local data even if sync fails
+                console.error("Error loading from Supabase:", error);
+                showSyncStatus("Error loading data from Supabase", "error");
+                logActivity('Error loading data from Supabase');
+                return false;
+            }
+        }
+
+        async function saveProgrammeToSupabase(programmeData) {
+            try {
+                const { data, error } = await supabase
+                    .from('programmes')
+                    .insert([{
+                        title: programmeData.title,
+                        description: programmeData.description,
+                        start_time: programmeData.startTime,
+                        end_time: programmeData.endTime,
+                        days: programmeData.days
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                return data ? data[0] : null;
+            } catch (error) {
+                console.error("Error saving programme to Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function saveEventToSupabase(eventData) {
+            try {
+                const { data, error } = await supabase
+                    .from('events')
+                    .insert([{
+                        title: eventData.title,
+                        description: eventData.description,
+                        start_date: eventData.startDate,
+                        end_date: eventData.endDate,
+                        start_time: eventData.startTime,
+                        end_time: eventData.endTime
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                return data ? data[0] : null;
+            } catch (error) {
+                console.error("Error saving event to Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function deleteProgrammeFromSupabase(programmeId) {
+            try {
+                const { error } = await supabase
+                    .from('programmes')
+                    .delete()
+                    .eq('id', programmeId);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error("Error deleting programme from Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function deleteEventFromSupabase(eventId) {
+            try {
+                const { error } = await supabase
+                    .from('events')
+                    .delete()
+                    .eq('id', eventId);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error("Error deleting event from Supabase:", error);
+                throw error;
             }
         }
 
         // === DATA MANAGEMENT ===
-        function saveDataToLocalStorage() {
-            const data = {
-                programmes: programmes,
-                events: events,
-                lastUpdated: new Date().toISOString(),
-                updatedBy: currentUser
-            };
-            localStorage.setItem('calendarData', JSON.stringify(data));
-            console.log("Data saved to local storage");
-        }
-
-        function loadFromLocalStorage() {
-            const saved = localStorage.getItem('calendarData');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    programmes = data.programmes || { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
-                    events = data.events || [];
-                    console.log("Data loaded from local storage");
-                    return true;
-                } catch (error) {
-                    console.error("Error loading saved data:", error);
-                }
-            }
-            return false;
-        }
-
         function showSyncStatus(message, type) {
             const statusElement = document.getElementById('sync-status');
             statusElement.textContent = message;
@@ -763,12 +822,13 @@
 
             console.log("Login attempt:", username, password);
 
-            if ((username === 'admin' && password === 'A11112') || 
-                (username === 'staff' && password === '11112')) {
+            if ((username === 'admin' && password === '456') || 
+                (username === 'ops' && password === '123')) {
                 currentUser = username;
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('main-content').style.display = 'block';
                 document.getElementById('logged-in-user').textContent = username;
+                document.getElementById('user-status').innerHTML = `<i class="fas fa-user"></i> Logged in as: ${username}`;
                 logActivity(`Logged in as ${username}`);
                 initializeCalendar();
             } else {
@@ -785,6 +845,7 @@
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('login-error').style.display = 'none';
+            document.getElementById('user-status').textContent = 'Not logged in';
         }
 
         // === ACTIVITY LOG ===
@@ -958,28 +1019,55 @@
         }
 
         // === PROGRAMME & EVENT MANAGEMENT ===
-        function deleteProgramme(day, index) {
+        async function deleteProgramme(day, index) {
             if (confirm('Delete this programme?')) {
-                const programmeTitle = programmes[day][index].title;
-                programmes[day].splice(index, 1);
-                saveDataToLocalStorage();
-                displayManageList();
-                if (document.getElementById('view').classList.contains('active')) {
-                    displaySchedule(getCurrentDay());
+                const programme = programmes[day][index];
+                const programmeTitle = programme.title;
+                
+                try {
+                    await deleteProgrammeFromSupabase(programme.id);
+                    programmes[day].splice(index, 1);
+                    
+                    // Also remove from other days if it's a multi-day programme
+                    if (programme.days && programme.days.length > 1) {
+                        programme.days.forEach(d => {
+                            if (d !== day) {
+                                const idx = programmes[d].findIndex(p => p.id === programme.id);
+                                if (idx !== -1) {
+                                    programmes[d].splice(idx, 1);
+                                }
+                            }
+                        });
+                    }
+                    
+                    displayManageList();
+                    if (document.getElementById('view').classList.contains('active')) {
+                        displaySchedule(getCurrentDay());
+                    }
+                    logActivity(`Deleted programme: "${programmeTitle}"`);
+                    showSyncStatus('Programme deleted successfully!', 'success');
+                } catch (error) {
+                    showSyncStatus('Error deleting programme', 'error');
+                    console.error('Delete error:', error);
                 }
-                logActivity(`Deleted programme: "${programmeTitle}"`);
-                alert('Programme deleted!');
             }
         }
 
-        function deleteEvent(index) {
+        async function deleteEvent(index) {
             if (confirm('Delete this event?')) {
-                const eventTitle = events[index].title;
-                events.splice(index, 1);
-                saveDataToLocalStorage();
-                displayManageList();
-                logActivity(`Deleted event: "${eventTitle}"`);
-                alert('Event deleted!');
+                const event = events[index];
+                const eventTitle = event.title;
+                
+                try {
+                    await deleteEventFromSupabase(event.id);
+                    events.splice(index, 1);
+                    displayManageList();
+                    logActivity(`Deleted event: "${eventTitle}"`);
+                    showSyncStatus('Event deleted successfully!', 'success');
+                } catch (error) {
+                    showSyncStatus('Error deleting event', 'error');
+                    console.error('Delete error:', error);
+                }
             }
         }
 
@@ -1006,10 +1094,10 @@
                 document.querySelector('.tab[data-tab="add-programme"]').classList.add('active');
                 document.getElementById('add-programme').classList.add('active');
                 
-                programmes[day].splice(index, 1);
-                saveDataToLocalStorage();
-                
-                logActivity(`Editing programme: "${programme.title}"`);
+                // Delete the old programme
+                deleteProgramme(day, index).then(() => {
+                    logActivity(`Editing programme: "${programme.title}"`);
+                });
             }
         }
 
@@ -1028,10 +1116,10 @@
                 document.querySelector('.tab[data-tab="add-event"]').classList.add('active');
                 document.getElementById('add-event').classList.add('active');
                 
-                events.splice(index, 1);
-                saveDataToLocalStorage();
-                
-                logActivity(`Editing event: "${event.title}"`);
+                // Delete the old event
+                deleteEvent(index).then(() => {
+                    logActivity(`Editing event: "${event.title}"`);
+                });
             }
         }
 
@@ -1040,8 +1128,8 @@
             return activeDay ? activeDay.getAttribute('data-day') : 'mon';
         }
 
-        function manualSync() {
-            loadDataFromGitHub().then((success) => {
+        function syncData() {
+            loadDataFromSupabase().then((success) => {
                 if (success) {
                     if (document.getElementById('view').classList.contains('active')) {
                         displaySchedule(getCurrentDay());
@@ -1053,7 +1141,7 @@
             });
         }
 
-        function exportToCSV() {
+        function downloadCSV() {
             let csvContent = "Type,Title,Description,Day,Start Date,End Date,Start Time,End Time,Days\n";
             
             // Export programmes
@@ -1068,7 +1156,7 @@
                         "",
                         programme.startTime,
                         programme.endTime,
-                        programme.days.join(',')
+                        programme.days ? programme.days.join(',') : day
                     ];
                     csvContent += row.join(',') + '\n';
                 });
@@ -1096,127 +1184,8 @@
             link.download = 'programmes-events.csv';
             link.click();
             
-            logActivity('Exported data to CSV');
-            alert('CSV exported successfully!');
-        }
-
-        function importFromCSV(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const csvText = e.target.result;
-                    const rows = parseCSV(csvText);
-                    
-                    let importedCount = 0;
-                    
-                    if (rows && rows.length > 0) {
-                        console.log(`Found ${rows.length} rows in CSV`);
-                        
-                        rows.forEach((row, index) => {
-                            if (index === 0) return; // Skip header
-                            
-                            const type = row[0] || '';
-                            const title = row[1] || '';
-                            const description = row[2] || '';
-                            const day = (row[3] || '').toLowerCase();
-                            const startDate = row[4] || '';
-                            const endDate = row[5] || '';
-                            const startTime = row[6] || '';
-                            const endTime = row[7] || '';
-                            const days = row[8] || '';
-                            
-                            if (type === 'Programme' && title && day) {
-                                const programmeDays = days ? 
-                                    days.split(',').map(d => d.trim().toLowerCase()) : 
-                                    [day];
-                                
-                                programmeDays.forEach(progDay => {
-                                    if (programmes[progDay] !== undefined) {
-                                        const exists = programmes[progDay].some(p => p.title === title && p.startTime === startTime);
-                                        if (!exists) {
-                                            programmes[progDay].push({
-                                                title,
-                                                description: description || '',
-                                                startTime: startTime || '',
-                                                endTime: endTime || '',
-                                                days: programmeDays
-                                            });
-                                            importedCount++;
-                                        }
-                                    }
-                                });
-                            } else if (type === 'Event' && title) {
-                                const exists = events.some(e => e.title === title && e.startDate === startDate);
-                                if (!exists) {
-                                    events.push({
-                                        title,
-                                        description: description || '',
-                                        startDate: startDate,
-                                        endDate: endDate || startDate, // Use start date if end date not provided
-                                        startTime: startTime || '',
-                                        endTime: endTime || '',
-                                        day: day || ''
-                                    });
-                                    importedCount++;
-                                }
-                            }
-                        });
-                        
-                        saveDataToLocalStorage();
-                        showSyncStatus(`Imported ${importedCount} new items from CSV!`, "success");
-                        logActivity(`Imported ${importedCount} items from CSV`);
-                        
-                        if (document.getElementById('view').classList.contains('active')) {
-                            displaySchedule(getCurrentDay());
-                        }
-                        if (document.getElementById('manage').classList.contains('active')) {
-                            displayManageList();
-                        }
-                        
-                        alert(`CSV imported successfully! ${importedCount} new items added.`);
-                    }
-                } catch (error) {
-                    console.error("Error importing CSV:", error);
-                    showSyncStatus("Error importing CSV: " + error.message, "error");
-                    alert('Error importing CSV file. Please check the format.');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        function parseCSV(csvText) {
-            const rows = [];
-            const lines = csvText.split('\n');
-            
-            lines.forEach(line => {
-                if (line.trim() === '') return;
-                
-                const row = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        row.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                
-                row.push(current.trim());
-                rows.push(row);
-            });
-            
-            return rows;
+            logActivity('Downloaded data as CSV');
+            showSyncStatus('CSV downloaded successfully!', 'success');
         }
 
         function printPage() {
@@ -1225,7 +1194,7 @@
         }
 
         // === UTILITY FUNCTIONS ===
-        function updateSingaporeTime() {
+        function updateCurrentTime() {
             const now = new Date();
             const timeString = now.toLocaleString('en-SG', { 
                 timeZone: 'Asia/Singapore',
@@ -1235,23 +1204,16 @@
                 day: 'numeric',
                 hour: '2-digit', 
                 minute: '2-digit', 
-                second: '2-digit'
+                second: '2-digit',
+                hour12: false
             });
-            document.getElementById('singapore-time').textContent = timeString;
+            document.getElementById('current-time').textContent = timeString;
         }
 
         // === INITIALIZATION ===
-        function initializeCalendar() {
-            // Load from local storage first (user's current data)
-            const localSuccess = loadFromLocalStorage();
-            
-            // Then try to sync with GitHub to get any new data
-            loadDataFromGitHub().then((githubSuccess) => {
-                if (localSuccess) {
-                    showSyncStatus("Data loaded successfully", "success");
-                }
-                setupUI();
-            });
+        async function initializeCalendar() {
+            await loadDataFromSupabase();
+            setupUI();
         }
 
         function setupUI() {
@@ -1284,7 +1246,7 @@
             });
 
             // Programme form submission
-            document.getElementById('programme-form').addEventListener('submit', function(e) {
+            document.getElementById('programme-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (currentUser !== 'admin') {
                     alert('Only admin can add programmes');
@@ -1298,35 +1260,51 @@
                 
                 const daysToAdd = selectedDays.length > 0 ? selectedDays : ['mon'];
                 
-                daysToAdd.forEach(day => {
-                    programmes[day].push({ 
-                        title, 
-                        description, 
-                        startTime, 
-                        endTime, 
-                        days: daysToAdd 
+                try {
+                    // Save to Supabase
+                    const savedProgramme = await saveProgrammeToSupabase({
+                        title,
+                        description,
+                        startTime,
+                        endTime,
+                        days: daysToAdd
                     });
-                });
-                
-                this.reset();
-                selectedDays = [];
-                document.querySelectorAll('.day-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                
-                saveDataToLocalStorage();
-                logActivity(`Added programme: "${title}"`);
-                alert(`Programme added to ${daysToAdd.map(d => getDayName(d)).join(', ')}!`);
-                
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-                document.querySelector('.tab[data-tab="view"]').classList.add('active');
-                document.getElementById('view').classList.add('active');
-                displaySchedule('mon');
+
+                    // Add to local data
+                    daysToAdd.forEach(day => {
+                        programmes[day].push({ 
+                            id: savedProgramme.id,
+                            title, 
+                            description, 
+                            startTime, 
+                            endTime, 
+                            days: daysToAdd,
+                            created_at: savedProgramme.created_at
+                        });
+                    });
+                    
+                    this.reset();
+                    selectedDays = [];
+                    document.querySelectorAll('.day-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    logActivity(`Added programme: "${title}"`);
+                    showSyncStatus(`Programme added to ${daysToAdd.map(d => getDayName(d)).join(', ')}!`, 'success');
+                    
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule('mon');
+                } catch (error) {
+                    showSyncStatus('Error saving programme to database', 'error');
+                    console.error('Save error:', error);
+                }
             });
 
             // Event form submission
-            document.getElementById('event-form').addEventListener('submit', function(e) {
+            document.getElementById('event-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (currentUser !== 'admin') {
                     alert('Only admin can add events');
@@ -1346,26 +1324,42 @@
                     return;
                 }
                 
-                events.push({
-                    title,
-                    description,
-                    startDate,
-                    endDate,
-                    startTime,
-                    endTime,
-                    day: '' // We'll calculate this based on start date
-                });
-                
-                this.reset();
-                saveDataToLocalStorage();
-                logActivity(`Added event: "${title}"`);
-                alert('Event added successfully!');
-                
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-                document.querySelector('.tab[data-tab="view"]').classList.add('active');
-                document.getElementById('view').classList.add('active');
-                displaySchedule(getCurrentDay());
+                try {
+                    // Save to Supabase
+                    const savedEvent = await saveEventToSupabase({
+                        title,
+                        description,
+                        startDate,
+                        endDate,
+                        startTime,
+                        endTime
+                    });
+                    
+                    // Add to local data
+                    events.push({
+                        id: savedEvent.id,
+                        title,
+                        description,
+                        startDate,
+                        endDate,
+                        startTime,
+                        endTime,
+                        created_at: savedEvent.created_at
+                    });
+                    
+                    this.reset();
+                    logActivity(`Added event: "${title}"`);
+                    showSyncStatus('Event added successfully!', 'success');
+                    
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.tab[data-tab="view"]').classList.add('active');
+                    document.getElementById('view').classList.add('active');
+                    displaySchedule(getCurrentDay());
+                } catch (error) {
+                    showSyncStatus('Error saving event to database', 'error');
+                    console.error('Save error:', error);
+                }
             });
 
             // Set min date for event forms
@@ -1377,8 +1371,8 @@
         }
 
         // Start time updates
-        updateSingaporeTime();
-        setInterval(updateSingaporeTime, 1000);
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
 
         console.log("Calendar system ready - awaiting login");
     </script>
