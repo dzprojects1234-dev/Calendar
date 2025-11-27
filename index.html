@@ -686,8 +686,8 @@
     <script>
         // === SUPABASE CONFIGURATION ===
         // Replace with your actual Supabase credentials
-        const SUPABASE_URL = 'https://hbmttwxsgpgrfrcijagt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibXR0d3hzZ3BncmZyY2lqYWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTEyMjcsImV4cCI6MjA3OTc4NzIyN30.LeownHuFwZmFOx7XOBFZYh2VZ9qy9H4fThuuR4WF1I0';
+        const SUPABASE_URL = 'https://test.supabase.co';
+        const SUPABASE_ANON_KEY = 'test';
         
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -885,7 +885,7 @@
 
 
 async function clearAllLogs() {
-    if (confirm('Clear all activity logs? This cannot be undone!') && currentUser === 'admin') {
+    if (confirm('Clear all activity logs? This cannot be undone!') && currentUser === 'Admin') {
         try {
             // Clear from Supabase
             const { error } = await supabase
@@ -942,8 +942,8 @@ async function clearAllLogs() {
 
             console.log("Login attempt:", username, password);
 
-            if ((username === 'admin' && password === '456') || 
-                (username === 'ops' && password === '123')) {
+            if ((username === 'Admin' && password === '456') || 
+                (username === 'Ops' && password === '123')) {
                 currentUser = username;
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('main-content').style.display = 'block';
@@ -1244,7 +1244,7 @@ function loadLogsFromLocalStorage() {
                         <div style="font-weight: bold; font-size: 18px;">${programme.title}</div>
                         <div style="color: #6a11cb; margin: 5px 0;">${programme.startTime} - ${programme.endTime}</div>
                         <div>${programme.description}</div>
-                        ${currentUser === 'admin' ? `
+                        ${currentUser === 'Admin' ? `
                         <div class="event-actions">
                             <button class="action-btn edit-btn" onclick="editProgramme('${day}', ${index})">
                                 <i class="fas fa-edit"></i> Edit
@@ -1578,8 +1578,8 @@ async function initializeCalendar() {
             // Programme form submission
             document.getElementById('programme-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                if (currentUser !== 'admin') {
-                    alert('Only admin can add programmes');
+                if (currentUser !== 'Admin') {
+                    alert('Only Admin can add programmes');
                     return;
                 }
 
@@ -1636,8 +1636,8 @@ async function initializeCalendar() {
             // Event form submission
             document.getElementById('event-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                if (currentUser !== 'admin') {
-                    alert('Only admin can add events');
+                if (currentUser !== 'Admin') {
+                    alert('Only Admin can add events');
                     return;
                 }
 
