@@ -511,10 +511,71 @@
     </style>
 </head>
 <body>
+
+
+
+
+
+
+// Add this to your existing JavaScript
+function getUserLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Using OpenStreetMap Nominatim (free, no API key needed)
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await response.json();
+                    
+                    if (data.address) {
+                        const street = data.address.road || '';
+                        const suburb = data.address.suburb || '';
+                        const city = data.address.city || data.address.town || '';
+                        
+                        let locationText = 'Singapore';
+                        if (street) locationText = `${street}, ${city}`;
+                        
+                        document.getElementById('user-location').textContent = locationText;
+                    }
+                } catch (error) {
+                    console.log("Couldn't get street name, using city only");
+                }
+            },
+            (error) => {
+                console.log("Location access denied or unavailable");
+                document.getElementById('user-location').textContent = 'Singapore';
+            }
+        );
+    }
+}
+
+// Update your location banner HTML:
+// Change from: <div><i class="fas fa-map-marker-alt"></i> Location: Singapore</div>
+// To: <div><i class="fas fa-map-marker-alt"></i> Location: <span id="user-location">Detecting...</span></div>
+
+
+
+
+
+
+
     <!-- Location and Time Banner -->
     <div class="location-banner">
         <div class="location-info">
-            <div><i class="fas fa-map-marker-alt"></i> Location: Singapore</div>
+
+
+
+
+
+            <div><i class="fas fa-map-marker-alt"></i> Location: <span id="user-location">Detecting...</span></div>
+
+
+
+
+
             <div><i class="fas fa-clock"></i> Current Time: <span id="current-time">Loading...</span></div>
         </div>
         <div id="user-status">Not logged in</div>
