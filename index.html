@@ -136,14 +136,6 @@
             font-weight: bold;
         }
 
-        .respect-message {
-            background: #fff3cd;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #ffc107;
-        }
-
         .footer-note {
             margin-top: 20px;
             padding-top: 15px;
@@ -472,7 +464,7 @@
             border-radius: 12px;
             padding: 20px;
             margin-top: 20px;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
             display: none;
             box-shadow: var(--card-shadow);
@@ -485,6 +477,12 @@
             border-radius: 8px;
             border-left: 4px solid var(--primary-color);
             font-size: 14px;
+        }
+
+        .log-meta {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
         }
 
         /* ===== FORM ELEMENTS ===== */
@@ -661,6 +659,7 @@
             <div class="user-banner">
                 <i class="fas fa-user"></i> 
                 Logged in as: <span id="logged-in-user">User</span>
+                <span id="supabase-status" style="margin-left: 15px; font-size: 12px; background: #ff9800; padding: 2px 8px; border-radius: 10px;">Checking Supabase...</span>
             </div>
         </header>
 
@@ -814,7 +813,7 @@
 
         <!-- Activity Log -->
         <div class="activity-log" id="activity-log">
-            <h3>Activity Log</h3>
+            <h3>Activity Log <span id="log-count" style="font-size: 14px; color: #666;"></span></h3>
             <div id="log-entries"></div>
         </div>
     </div>
@@ -830,6 +829,9 @@
             }
         };
 
+        // ===== SUPABASE CLIENT =====
+        const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
         // ===== APPLICATION STATE =====
         const AppState = {
             programmes: {
@@ -837,8 +839,8 @@
             },
             events: [],
             currentUser: null,
-            activityLog: [],
-            selectedDays: []
+            selectedDays: [],
+            supabaseConnected: false
         };
 
         // ===== WELCOME MESSAGE CONTENT =====
@@ -862,12 +864,226 @@
             initializeApp();
         });
 
-        function initializeApp() {
+        async function initializeApp() {
             updateCurrentTime();
             setInterval(updateCurrentTime, 1000);
             getUserLocation();
             
+            // Test Supabase connection
+            await testSupabaseConnection();
+            
             console.log("Mosque Operations Calendar System Ready");
+        }
+
+        // ===== SUPABASE CONNECTION TEST =====
+        async function testSupabaseConnection() {
+            const statusElement = document.getElementById('supabase-status');
+            
+            try {
+                // Test connection by trying to fetch logs
+                const { data, error } = await supabase
+                    .from('activity_logs')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                AppState.supabaseConnected = true;
+                statusElement.textContent = '✓ Supabase Connected';
+                statusElement.style.background = '#4CAF50';
+                console.log("Supabase connection successful");
+            } catch (error) {
+                AppState.supabaseConnected = false;
+                statusElement.textContent = '✗ Supabase Disconnected';
+                statusElement.style.background = '#f44336';
+                console.error("Supabase connection failed:", error);
+            }
+        }
+
+        // ===== SUPABASE LOGGING FUNCTIONS =====
+        async function saveLogToSupabase(logData) {
+            if (!AppState.supabaseConnected) {
+                console.warn("Supabase not connected, skipping log save");
+                return null;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('activity_logs')
+                    .insert([{
+                        username: logData.user,
+                        action: logData.message,
+                        location: logData.location,
+                        device_type: logData.deviceType,
+                        screen_resolution: logData.screenResolution,
+                        browser: logData.browserInfo,
+                        user_agent: logData.userAgent
+                    }])
+                    .select();
+                
+                if (error) throw error;
+                return data ? data[0] : null;
+            } catch (error) {
+                console.error("Error saving log to Supabase:", error);
+                throw error;
+            }
+        }
+
+        async function loadLogsFromSupabase() {
+            if (!AppState.supabaseConnected) {
+                console.warn("Supabase not connected, cannot load logs");
+                return [];
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('activity_logs')
+                    .select('*')
+                    .order('timestamp', { ascending: false })
+                    .limit(100);
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    return data.map(item => ({
+                        id: item.id,
+                        timestamp: new Date(item.timestamp).toLocaleString('en-SG'),
+                        user: item.username,
+                        message: item.action,
+                        location: item.location,
+                        deviceType: item.device_type,
+                        screenResolution: item.screen_resolution,
+                        browserInfo: item.browser,
+                        ipAddress: item.ip_address,
+                        country: item.country,
+                        userAgent: item.user_agent
+                    }));
+                }
+                return [];
+            } catch (error) {
+                console.error("Error loading logs from Supabase:", error);
+                return [];
+            }
+        }
+
+        async function clearLogsFromSupabase() {
+            if (!AppState.supabaseConnected) {
+                console.warn("Supabase not connected, cannot clear logs");
+                return false;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('activity_logs')
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000');
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error("Error clearing logs from Supabase:", error);
+                throw error;
+            }
+        }
+
+        // ===== ACTIVITY LOGGING SYSTEM =====
+        async function logActivity(message) {
+            const timestamp = new Date().toLocaleString('en-SG');
+            const userAgent = navigator.userAgent;
+            const location = document.getElementById('user-location').textContent;
+            
+            const deviceType = getDeviceType(userAgent);
+            const screenResolution = `${screen.width}x${screen.height}`;
+            const browserInfo = getBrowserInfo(userAgent);
+            
+            const logEntry = {
+                timestamp,
+                user: AppState.currentUser,
+                message,
+                location,
+                deviceType,
+                screenResolution,
+                browserInfo,
+                userAgent: userAgent
+            };
+            
+            // Save to Supabase
+            try {
+                await saveLogToSupabase(logEntry);
+                console.log("Activity logged to Supabase:", message);
+            } catch (error) {
+                console.error("Failed to save log to Supabase:", error);
+            }
+            
+            // Refresh the log display to show the latest entries
+            await refreshLogDisplay();
+        }
+
+        async function refreshLogDisplay() {
+            const logs = await loadLogsFromSupabase();
+            updateLogDisplay(logs);
+        }
+
+        function updateLogDisplay(logs) {
+            const logEntries = document.getElementById('log-entries');
+            const logCount = document.getElementById('log-count');
+            
+            if (logEntries) {
+                logEntries.innerHTML = '';
+                
+                if (logs.length === 0) {
+                    logEntries.innerHTML = '<div class="no-events">No activity logs found</div>';
+                    logCount.textContent = '(0 logs)';
+                    return;
+                }
+                
+                logCount.textContent = `(${logs.length} logs from Supabase)`;
+                
+                logs.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    
+                    let logText = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
+                    
+                    if (entry.deviceType || entry.location !== 'Detecting...') {
+                        logText += `<div class="log-meta">`;
+                        logText += `📍 ${entry.location}`;
+                        logText += ` | 📱 ${entry.deviceType}`;
+                        logText += ` | 🖥️ ${entry.screenResolution}`;
+                        logText += ` | 🌐 ${entry.browserInfo}`;
+                        logText += `</div>`;
+                    }
+                    
+                    div.innerHTML = logText;
+                    logEntries.appendChild(div);
+                });
+            }
+        }
+
+        async function viewActivityLog() {
+            const logContainer = document.getElementById('activity-log');
+            const isVisible = logContainer.style.display === 'block';
+            
+            if (!isVisible) {
+                // Load logs from Supabase when opening
+                await refreshLogDisplay();
+            }
+            
+            logContainer.style.display = isVisible ? 'none' : 'block';
+        }
+
+        async function clearAllLogs() {
+            if (confirm('Clear all activity logs from Supabase? This cannot be undone!') && AppState.currentUser === 'Admin') {
+                try {
+                    await clearLogsFromSupabase();
+                    await refreshLogDisplay();
+                    showSyncStatus('All logs cleared from Supabase!', 'success');
+                    logActivity('Cleared all activity logs from Supabase');
+                } catch (error) {
+                    showSyncStatus('Error clearing logs from Supabase', 'error');
+                    console.error('Clear logs error:', error);
+                }
+            }
         }
 
         // ===== UTILITY FUNCTIONS =====
@@ -1077,71 +1293,6 @@
                 hour12: false
             });
             document.getElementById('current-time').textContent = timeString;
-        }
-
-        // ===== ACTIVITY LOGGING =====
-        async function logActivity(message) {
-            const timestamp = new Date().toLocaleString('en-SG');
-            const userAgent = navigator.userAgent;
-            const location = document.getElementById('user-location').textContent;
-            
-            const deviceType = getDeviceType(userAgent);
-            const screenResolution = `${screen.width}x${screen.height}`;
-            const browserInfo = getBrowserInfo(userAgent);
-            
-            const logEntry = {
-                timestamp,
-                user: AppState.currentUser,
-                message,
-                location,
-                deviceType,
-                screenResolution,
-                browserInfo,
-                userAgent: userAgent
-            };
-            
-            AppState.activityLog.unshift(logEntry);
-            updateLogDisplay();
-        }
-
-        function updateLogDisplay() {
-            const logEntries = document.getElementById('log-entries');
-            if (logEntries) {
-                logEntries.innerHTML = '';
-                AppState.activityLog.forEach(entry => {
-                    const div = document.createElement('div');
-                    div.className = 'log-entry';
-                    
-                    let logText = `<strong>${entry.timestamp}</strong> | ${entry.user} - ${entry.message}`;
-                    
-                    if (entry.deviceType || entry.location !== 'Detecting...') {
-                        logText += `<br><small style="color: #666; font-size: 12px;">`;
-                        logText += `📍 ${entry.location}`;
-                        logText += ` | 📱 ${entry.deviceType}`;
-                        logText += ` | 🖥️ ${entry.screenResolution}`;
-                        logText += ` | 🌐 ${entry.browserInfo}`;
-                        logText += `</small>`;
-                    }
-                    
-                    div.innerHTML = logText;
-                    logEntries.appendChild(div);
-                });
-            }
-        }
-
-        function viewActivityLog() {
-            const logContainer = document.getElementById('activity-log');
-            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
-            updateLogDisplay();
-        }
-
-        function clearAllLogs() {
-            if (confirm('Clear all activity logs? This cannot be undone!') && AppState.currentUser === 'Admin') {
-                AppState.activityLog = [];
-                updateLogDisplay();
-                showSyncStatus('All logs cleared successfully!', 'success');
-                logActivity('Cleared all activity logs');
-            }
         }
 
         // ===== CALENDAR FUNCTIONS =====
